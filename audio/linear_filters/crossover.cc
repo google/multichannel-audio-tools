@@ -1,0 +1,58 @@
+#include "audio/linear_filters/crossover.h"
+
+#include "audio/linear_filters/biquad_filter_design.h"
+
+namespace linear_filters {
+namespace {
+void MakeButterworth(int order, float crossover, float sample_rate,
+                       BiquadFilterCascadeCoefficients* lowpass,
+                       BiquadFilterCascadeCoefficients* highpass) {
+  ButterworthFilterDesign filter_design = ButterworthFilterDesign(order);
+  *lowpass = filter_design.LowpassCoefficients(sample_rate, crossover);
+  *highpass = filter_design.HighpassCoefficients(sample_rate, crossover);
+}
+
+// A Linkwitz-Riley filter is made from a cascade of two Butterworth filters of
+// half the order.
+void MakeLinkwitzRiley(int order, float crossover, float sample_rate,
+                       BiquadFilterCascadeCoefficients* lowpass,
+                       BiquadFilterCascadeCoefficients* highpass) {
+  CHECK_EQ(order % 2, 0);
+  MakeButterworth(order / 2, crossover, sample_rate, lowpass, highpass);
+  const int initial_size = lowpass->size();
+  for (int i = 0; i < initial_size; ++i) {
+    lowpass->AppendBiquad((*lowpass)[i]);
+    highpass->AppendBiquad((*highpass)[i]);
+  }
+}
+
+
+}  // namespace
+
+CrossoverFilterDesign::CrossoverFilterDesign(CrossoverType type, int order,
+                                             float crossover_frequency_hz,
+                                             float sample_rate_hz) {
+  CHECK_GT(order, 0);
+  CHECK_LT(0, crossover_frequency_hz);
+  CHECK_LT(crossover_frequency_hz, sample_rate_hz / 2);
+
+  switch (type) {
+    case kButterworth: {
+      MakeButterworth(order, crossover_frequency_hz, sample_rate_hz,
+                      &lowpass_, &highpass_);
+    }
+    break;
+    case kLinkwitzRiley: {
+      MakeLinkwitzRiley(order, crossover_frequency_hz, sample_rate_hz,
+                        &lowpass_, &highpass_);
+    }
+    break;
+  }
+  // Account for the 180 degrees phase difference between the two filters.
+  // https://en.wikipedia.org/wiki/Linkwitz%E2%80%93Riley_filter
+  if ((order - 2) % 4 == 0) {  // Check if order is 2, 6, 10, 14, ...
+    highpass_.AdjustGain(-1);
+  }
+}
+
+}  // namespace linear_filters
