@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef AUDIO_DSP_ATTACK_RELEASE_ENVELOPE_H_
 #define AUDIO_DSP_ATTACK_RELEASE_ENVELOPE_H_
 
