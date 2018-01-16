@@ -24,4 +24,4 @@ A non-exhaustive list of libraries in this repo:
 - envelope detectors
 - gmock matchers for vector/Eigen types
 
-Contact multichannel-audio-tools-maintainers@google with questions/issues.
+Contact multichannel-audio-tools-maintainers@google.com with questions/issues.
