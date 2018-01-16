@@ -77,7 +77,7 @@ bool Demangle(const char *mangled, char *out, int out_size) {
 }
 
 string Demangle(const char *mangled) {
-  return "";
+  return {};
 }
 
 namespace format {
@@ -85,9 +85,9 @@ string StringF(const char *fmt, ...) {
   string s;
   va_list argptr;
   va_start(argptr, fmt);
-  constexpr int kMaxStringLength = 512;
-  char temp[kMaxStringLength];
-  vsnprintf(temp, kMaxStringLength, fmt, argptr);
+  constexpr int kBufferSize = 512;
+  char temp[kBufferSize];
+  vsnprintf(temp, kBufferSize, fmt, argptr);
   va_end(argptr);
   s = temp;
   return s;

@@ -3,7 +3,8 @@
 (This is not an official Google product!)
 
 Multichannel Audio Tools contains common signal processing building blocks,
-vectorized for multichannel processing using [Eigen](eigen.tuxfamily.org/).
+vectorized for multichannel processing using
+[Eigen](http://www.eigen.tuxfamily.org/).
 
 A non-exhaustive list of libraries in this repo:
 - biquad filters
@@ -25,3 +26,13 @@ A non-exhaustive list of libraries in this repo:
 - gmock matchers for vector/Eigen types
 
 Contact multichannel-audio-tools-maintainers@google.com with questions/issues.
+
+This library is intended to be built with [Bazel](https://bazel.build/). See
+command below regarding running tests and building with the proper flags.
+```
+bazel test -c opt --cxxopt="-fext-numeric-literals" \
+                  --cxxopt="-Wno-sign-compare" \
+                  --cxxopt="-fpermissive" \
+                  --cxxopt="-std=c++11" \
+                  audio/...
+```

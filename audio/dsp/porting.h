@@ -32,7 +32,7 @@ typedef int64_t int64;
   TypeName(const TypeName&) = delete;      \
   TypeName& operator=(const TypeName&) = delete
 
-// Replacing util/math/mathutil.h.
+
 template<typename T> struct MathLimits {
   // Not a number, i.e. result of 0/0.
   // Present only if !kIsInteger.
