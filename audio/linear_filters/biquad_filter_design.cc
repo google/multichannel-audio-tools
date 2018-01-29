@@ -62,14 +62,22 @@ BiquadFilterCoefficients HighpassBiquadFilterCoefficients(
       sample_rate_hz, corner_frequency_hz);
 }
 
+namespace {
+  BiquadFilterCoefficients AnalogBandpassBiquadFilterCoefficients(
+      double center_frequency_hz, double quality_factor) {
+    const double omega_n = 2.0 * M_PI * center_frequency_hz;
+    return {{0.0, omega_n / quality_factor, 0.0},
+            {1.0, omega_n / quality_factor, omega_n * omega_n}};
+  }
+}  // namespace
+
 BiquadFilterCoefficients BandpassBiquadFilterCoefficients(
     double sample_rate_hz, double center_frequency_hz, double quality_factor) {
   CheckArguments(sample_rate_hz, center_frequency_hz, quality_factor);
-  const double omega_n = 2.0 * M_PI * center_frequency_hz;
-  return BilinearTransform(
-      {0.0, omega_n / quality_factor, 0.0},
-      {1.0, omega_n / quality_factor, omega_n * omega_n},
-      sample_rate_hz, center_frequency_hz);
+  BiquadFilterCoefficients bandpass = AnalogBandpassBiquadFilterCoefficients(
+      center_frequency_hz, quality_factor);
+  return BilinearTransform(bandpass.b, bandpass.a,
+                           sample_rate_hz, center_frequency_hz);
 }
 
 BiquadFilterCoefficients BandstopBiquadFilterCoefficients(
@@ -167,15 +175,31 @@ BiquadFilterCoefficients ParametricPeakBiquadFilterCoefficients(
     float gain) {
   CheckArguments(sample_rate_hz, center_frequency_hz, Q);
   CHECK_GE(gain, 0);
-  const double omega = 2 * M_PI * center_frequency_hz / sample_rate_hz;
-  const double alpha = std::sin(omega) / (2 * Q);
+  BiquadFilterCoefficients resonator = AnalogBandpassBiquadFilterCoefficients(
+      center_frequency_hz, Q);
+  DCHECK_EQ(resonator.b[0], 0);
+  DCHECK_EQ(resonator.b[1], resonator.a[1]);
+  DCHECK_EQ(resonator.b[2], 0);
+  // This is based on Julius Smith's formulation of the parametric peak
+  // filter as 1 + Hs(s), where Hs(s) is an analog resonator.
+  // https://ccrma.stanford.edu/~jos/fp/Peaking_Equalizers.html
+  // This produces the same filter as in the notes in the header doc, but
+  // the computation is simpler and more intuitive.
+  resonator.b[0] += resonator.a[0];
+  resonator.b[1] = gain * resonator.a[1];
+  resonator.b[2] += resonator.a[2];
+  return BilinearTransform(resonator.b, resonator.a,
+                           sample_rate_hz, center_frequency_hz);
+}
 
-  const double a2 = (1.0 - alpha) / (1.0 + alpha);
-  const double b1 = -(1 + a2) * std::cos(omega);
-  return {{0.5 * ((1.0 + a2) + (1.0 - a2) * gain),
-           -(1 + a2) * std::cos(omega),
-           0.5 * ((1.0 + a2) - (1.0 - a2) * gain)},
-          {1.0,  b1, (1.0 - alpha) / (1.0 + alpha)}};
+BiquadFilterCoefficients ParametricPeakBiquadFilterSymmetricCoefficients(
+    float sample_rate_hz,
+    float center_frequency_hz,
+    float Q,
+    float gain) {
+  if (gain < 1) { Q *= gain; }
+  return ParametricPeakBiquadFilterCoefficients(
+      sample_rate_hz, center_frequency_hz, Q, gain);
 }
 
 // Uses the notation from:

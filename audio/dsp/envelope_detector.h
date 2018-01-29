@@ -42,9 +42,21 @@ class EnvelopeDetector {
 
   // The coefficients for the prefilter, coeffs, must be designed for a sample
   // rate sample_rate_hz and not the downsampled rate.
+  //
+  // NOTE: If envelope_sample_rate_hz identically equals sample_rate_hz, the
+  // number of output samples for each call to process block is guaranteed to
+  // be equal to the number of input samples (the resampler is bypassed).
   void Init(int num_channels, float sample_rate_hz,
             float envelope_cutoff_hz, float envelope_sample_rate_hz,
             const linear_filters::BiquadFilterCascadeCoefficients& coeffs);
+
+  void Init(int num_channels, float sample_rate_hz,
+            float envelope_cutoff_hz, float envelope_sample_rate_hz,
+            const linear_filters::BiquadFilterCoefficients& coeffs) {
+    Init(num_channels, sample_rate_hz, envelope_cutoff_hz,
+         envelope_sample_rate_hz,
+         linear_filters::BiquadFilterCascadeCoefficients(coeffs));
+  }
 
   void Init(int num_channels, float sample_rate_hz,
             float envelope_cutoff_hz, float envelope_sample_rate_hz) {

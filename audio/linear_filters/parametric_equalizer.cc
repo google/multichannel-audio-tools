@@ -171,7 +171,7 @@ BiquadFilterCascadeCoefficients ParametricEqualizerParams::GetCoefficients(
           break;
         case EqualizerFilterParams::kPeak:
           cascade_coefficients.AppendBiquad(
-              ParametricPeakBiquadFilterCoefficients(
+              ParametricPeakBiquadFilterSymmetricCoefficients(
                   sample_rate_hz, stage.frequency_hz, stage.quality_factor,
                   DbToLinear(stage.gain_db)));
           break;

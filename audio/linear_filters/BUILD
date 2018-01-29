@@ -88,6 +88,7 @@ cc_test(
     deps = [
         ":biquad_filter_design",
         ":biquad_filter_test_tools",
+        "//audio/dsp:decibels",
         "//audio/dsp:porting",
         "//audio/dsp:testing_util",
         "@com_github_glog_glog//:glog",

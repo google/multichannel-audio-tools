@@ -130,7 +130,7 @@ TEST(ParametricEqualizerTest, InitTest) {
   params.SetGainDb(-6.0f);
   params.AddStage(EqualizerFilterParams::kLowShelf, 50.0f, 0.707f, 2.0f);
   params.AddStage(EqualizerFilterParams::kPeak, 750.0f, 6.0f, 6.0f);
-  params.AddStage(EqualizerFilterParams::kPeak, 5000.0f, 5.0f, -6.0f);
+  params.AddStage(EqualizerFilterParams::kPeak, 5000.0f, 8.0f, -6.0f);
   params.AddStage(EqualizerFilterParams::kHighShelf, 18000.0f, 0.707f, 6.0f);
 
   BiquadFilterCascadeCoefficients coeffs =
@@ -303,7 +303,7 @@ TEST(ParametricEqualizerTest, CanMatchResponse_EstimateAllParams) {
   EXPECT_NEAR(rms_error, 0, kToleranceDb);
 
   // See if we can converge to a tighter tolerance.
-  const float kTightToleranceDb = 0.02;
+  const float kTightToleranceDb = 0.06;
   fit_params.magnitude_db_rms_error_tol = kTightToleranceDb / 20;
   fit_params.max_iterations = 2000;
   fit_params.inner_convergence_params.convergence_threshold_db =

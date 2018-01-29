@@ -18,6 +18,9 @@ cc_library(
     hdrs = ["attack_release_envelope.h"],
     deps = [
         ":porting",
+        "//audio/linear_filters:biquad_filter",
+        "//audio/linear_filters:biquad_filter_coefficients",
+        "//audio/linear_filters:biquad_filter_design",
         "//audio/linear_filters:discretization",
     ],
 )

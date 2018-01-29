@@ -19,16 +19,19 @@
 #include <complex>
 #include <vector>
 
+#include "audio/dsp/decibels.h"
 #include "audio/dsp/testing_util.h"
 #include "audio/linear_filters/biquad_filter_test_tools.h"
 #include "gtest/gtest.h"
 
+#include "third_party/eigen3/Eigen/Core"
 
 #include "audio/dsp/porting.h"  // auto-added.
 
 
 namespace linear_filters {
 
+using ::audio_dsp::AmplitudeRatioToDecibels;
 using ::std::complex;
 using ::std::vector;
 using ::testing::DoubleNear;
@@ -335,8 +338,8 @@ TEST(BiquadFilterDesignTest, ParametricPeakCoefficientsTest) {
                                                    quality_factor,
                                                    gain);
         SCOPED_TRACE(
-            StringF("LowShelf (Q = %f) with center frequency = %f and gain %f.",
-                    quality_factor, center_frequency_hz, gain));
+            StringF("Parametric filter (Q = %f) with center frequency = %f "
+                    "and gain %f.", quality_factor, center_frequency_hz, gain));
         ASSERT_THAT(coeffs,
                     MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                         0, kSampleRateHz));
@@ -358,6 +361,119 @@ TEST(BiquadFilterDesignTest, ParametricPeakCoefficientsTest) {
           ASSERT_THAT(coeffs, MagnitudeResponseDecreases(
               center_frequency_hz, kSampleRateHz / 2, kSampleRateHz,
               kNumPoints));
+        }
+      }
+    }
+  }
+}
+
+// Make sure the filters get narrower as the Q is increased.
+TEST(BiquadFilterDesignTest, ParametricPeakCoefficientsQualityFactorTest) {
+  constexpr float kCenterFrequency = 1000.0f;
+  constexpr float kDefaultQualityFactor = 1.0f;
+  {
+    float gain = 3.0;
+    BiquadFilterCoefficients coeffs_narrow =
+              ParametricPeakBiquadFilterCoefficients(kSampleRateHz,
+                                                     kCenterFrequency,
+                                                     3 * kDefaultQualityFactor,
+                                                     gain);
+    BiquadFilterCoefficients coeffs_wide =
+              ParametricPeakBiquadFilterCoefficients(kSampleRateHz,
+                                                     kCenterFrequency,
+                                                     kDefaultQualityFactor,
+                                                     gain);
+    for (float f = 100; f < 600; f += 10) {
+      EXPECT_LT(coeffs_narrow.GainMagnitudeAtFrequency(kCenterFrequency - f,
+                                                       kSampleRateHz),
+                coeffs_wide.GainMagnitudeAtFrequency(kCenterFrequency - f,
+                                                     kSampleRateHz));
+      EXPECT_LT(coeffs_narrow.GainMagnitudeAtFrequency(kCenterFrequency + f,
+                                                       kSampleRateHz),
+                coeffs_wide.GainMagnitudeAtFrequency(kCenterFrequency + f,
+                                                     kSampleRateHz));
+    }
+  }
+  {
+    float gain = 0.3;
+    BiquadFilterCoefficients coeffs_narrow =
+              ParametricPeakBiquadFilterCoefficients(kSampleRateHz,
+                                                     kCenterFrequency,
+                                                     3 * kDefaultQualityFactor,
+                                                     gain);
+    BiquadFilterCoefficients coeffs_wide =
+              ParametricPeakBiquadFilterCoefficients(kSampleRateHz,
+                                                     kCenterFrequency,
+                                                     kDefaultQualityFactor,
+                                                     gain);
+    for (float f = 100; f < 600; f += 10) {
+      EXPECT_GT(coeffs_narrow.GainMagnitudeAtFrequency(kCenterFrequency - f,
+                                                       kSampleRateHz),
+                coeffs_wide.GainMagnitudeAtFrequency(kCenterFrequency - f,
+                                                     kSampleRateHz));
+      EXPECT_GT(coeffs_narrow.GainMagnitudeAtFrequency(kCenterFrequency + f,
+                                                       kSampleRateHz),
+                coeffs_wide.GainMagnitudeAtFrequency(kCenterFrequency + f,
+                                                     kSampleRateHz));
+    }
+  }
+}
+
+TEST(BiquadFilterDesignTest,
+     ParametricPeakCoefficientsVerticalFlipPropertyTest) {
+  constexpr double kTolerance = 1e-4;
+  for (float center_frequency_hz : {500.0f, 2000.0f, 10000.0f}) {
+    for (float quality_factor : {0.707f, 3.0f}) {
+      for (float gain : {2.0, 12.0}) {
+        CHECK_GT(gain, 1.0);  // Gain must be amplification for this test.
+        BiquadFilterCoefficients amplified_coeffs =
+            ParametricPeakBiquadFilterCoefficients(kSampleRateHz,
+                                                   center_frequency_hz,
+                                                   quality_factor,
+                                                   gain);
+        BiquadFilterCoefficients attenuation_coeffs =
+            ParametricPeakBiquadFilterCoefficients(kSampleRateHz,
+                                                   center_frequency_hz,
+                                                   quality_factor,
+                                                   1 / gain);
+        BiquadFilterCoefficients symmetric_amplified_coeffs =
+            ParametricPeakBiquadFilterSymmetricCoefficients(kSampleRateHz,
+                                                            center_frequency_hz,
+                                                            quality_factor,
+                                                            gain);
+        BiquadFilterCoefficients symmetric_attenuation_coeffs =
+            ParametricPeakBiquadFilterSymmetricCoefficients(kSampleRateHz,
+                                                            center_frequency_hz,
+                                                            quality_factor,
+                                                            1 / gain);
+        SCOPED_TRACE(
+            StringF("Parametric filter comparisons (Q = %f) with center "
+                    "frequency = %f and gain %f.",
+                    quality_factor, center_frequency_hz, gain));
+        // The amplification filters are the same.
+        for (float factor = 0.1; factor < 10; factor *= 1.3) {
+          ASSERT_EQ(amplified_coeffs.GainMagnitudeAtFrequency(
+                        center_frequency_hz * factor, kSampleRateHz),
+                    symmetric_amplified_coeffs.GainMagnitudeAtFrequency(
+                        center_frequency_hz * factor, kSampleRateHz));
+        }
+        // The attenuation filters are not the same.
+        for (float factor = 0.1; factor < 10; factor *= 1.3) {
+          ASSERT_NE(attenuation_coeffs.GainMagnitudeAtFrequency(
+                        center_frequency_hz * factor, kSampleRateHz),
+                    symmetric_attenuation_coeffs.GainMagnitudeAtFrequency(
+                        center_frequency_hz * factor, kSampleRateHz));
+        }
+        // The amplified filter and the symmetric attenuation filter are
+        // symmetric with respect to gain = 1 on a loglog (Bode) plot.
+        for (float factor = 0.1; factor < 10; factor *= 1.3) {
+          ASSERT_NEAR(AmplitudeRatioToDecibels(
+              amplified_coeffs.GainMagnitudeAtFrequency(
+                        center_frequency_hz * factor, kSampleRateHz)),
+                     -AmplitudeRatioToDecibels(
+              symmetric_attenuation_coeffs.GainMagnitudeAtFrequency(
+                        center_frequency_hz * factor, kSampleRateHz)),
+                      kTolerance);
         }
       }
     }

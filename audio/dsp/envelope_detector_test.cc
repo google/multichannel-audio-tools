@@ -101,5 +101,31 @@ TEST(EnvelopeDetectorTypedTest, CanGetMostRecentSamplesWhenProcessReturnsNone) {
   EXPECT_EQ(detector.MostRecentRmsEnvelopeValue()[0], current_output);
 }
 
+TEST(EnvelopeDetectorTypedTest, NoDownsamplingTest) {
+  constexpr float kSampleRate = 16000.0f;
+  constexpr int kNumSamples = 640;
+  constexpr int kOneChannel = 1;
+
+  // We will get very few output samples per block of input samples.
+  EnvelopeDetector detector;
+  detector.Init(kOneChannel, kSampleRate, 10.0, kSampleRate);
+
+  constexpr float kChannelOneFrequency = 1000.0f;
+  Eigen::ArrayXXf sine_wave(kOneChannel, kNumSamples);
+  constexpr float rads_per_sample_one =
+      2 * M_PI * kChannelOneFrequency / kSampleRate;
+  for (int i = 0; i < kNumSamples; ++i) {
+    sine_wave(0, i) = std::sin(rads_per_sample_one * i);
+  }
+
+  Eigen::ArrayXXf output;
+  for (int i = 0; i < 10; ++i) {
+    CHECK(detector.ProcessBlock(sine_wave, &output));
+  }
+  EXPECT_EQ(output.rows(), kOneChannel);
+  // Expect envelope to produce same number of samples it was given.
+  EXPECT_EQ(output.cols(), kNumSamples);
+  EXPECT_NEAR(detector.MostRecentRmsEnvelopeValue()[0], 1 / M_SQRT2, 1e-2);
+}
 }  // namespace
 }  // namespace audio_dsp

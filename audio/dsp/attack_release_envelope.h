@@ -17,25 +17,59 @@
 #ifndef AUDIO_DSP_ATTACK_RELEASE_ENVELOPE_H_
 #define AUDIO_DSP_ATTACK_RELEASE_ENVELOPE_H_
 
+#include "audio/linear_filters/biquad_filter.h"
+
 #include "audio/dsp/porting.h"  // auto-added.
 
 
 namespace audio_dsp {
 
+struct AttackReleaseEnvelopeParams {
+  AttackReleaseEnvelopeParams()
+    : attack_s(0.05f),
+      release_s(0.2f),
+      interpolation_rate_hz(200.0f) {}
+
+  AttackReleaseEnvelopeParams(float attack_seconds, float release_seconds)
+    : attack_s(attack_seconds),
+      release_s(release_seconds),
+      interpolation_rate_hz(200.0f) {}
+  // Time constant when input <= output.
+  float attack_s;
+  // Time constant when input > output.
+  float release_s;
+  // The rate at which coefficents can change on parameter change.
+  float interpolation_rate_hz;
+};
+
 // Computes an approximate envelope of a rectified signal with an asymmetrical
 // time constant.
+  // attack_s and release_s are time constants for the filter in seconds. When
+  // input > output, the attack coefficient is used. When input < output, the
+  // release coefficient is used.
 // TODO: Add multichannel support.
 // TODO: Add an Init function and make this class a little less
 // bare-bones.
 class AttackReleaseEnvelope {
  public:
-  // attack_s and release_s are time constants for the filter in seconds. When
-  // input > output, the attack coefficient is used. When input < output, the
-  // release coefficient is used.
-  AttackReleaseEnvelope(float attack_s, float release_s, float sample_rate_hz);
+  AttackReleaseEnvelope(const AttackReleaseEnvelopeParams& params,
+                        float sample_rate_hz);
 
+  AttackReleaseEnvelope(float attack_s, float release_s, float sample_rate_hz)
+    : AttackReleaseEnvelope(AttackReleaseEnvelopeParams(attack_s, release_s),
+                            sample_rate_hz) {}
+
+  // Note that the rectified signal is not guaranteed to be positive after a
+  // recent change in filter coefficients.
+  void SetAttackTimeSeconds(float attack_s);
+  void SetReleaseTimeSeconds(float release_s);
+
+  // Note that this leaves the time constants set to the last values passed
+  // to SetAttackTimeSeconds (or the constructor).
   void Reset() {
     envelope_ = 0;
+    attack_param_smoother_.SetSteadyStateCondition(attack_);
+    release_param_smoother_.SetSteadyStateCondition(release_);
   }
   // Process a single sample.
   float Output(float input);
@@ -46,6 +80,10 @@ class AttackReleaseEnvelope {
 
   float attack_;
   float release_;
+  float sample_rate_hz_;
+
+  linear_filters::BiquadFilter<float> attack_param_smoother_;
+  linear_filters::BiquadFilter<float> release_param_smoother_;
 };
 
 }  // namespace audio_dsp

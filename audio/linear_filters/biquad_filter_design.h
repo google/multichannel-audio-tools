@@ -175,9 +175,9 @@ BiquadFilterCoefficients RangedBandstopBiquadFilterCoefficients(
 // frequencies below (low shelf) or above (high shelf) the corner. Gain
 // is specified on a linear scale. By increasing the Q, the transition band can
 // be somewhat shortened, but peaking will occur such that the response is no
-// longer monotonic. Here is an image of a shelfing filter with Q larger than
+// longer monotonic. Here is an image of a shelving filter with Q larger than
 // 1/sqrt(2), the Q at which the response is no longer monotonic:
-// https://11150-presscdn-0-79-pagely.netdna-ssl.com/wp-content/uploads/2014/10/Pro-Q-2-tilt-shelf.png
+// https://bassgorilla.com/wp-content/uploads/2014/10/Pro-Q-2-tilt-shelf.png
 BiquadFilterCoefficients LowShelfBiquadFilterCoefficients(
     float sample_rate_hz,
     float corner_frequency_hz,
@@ -190,8 +190,37 @@ BiquadFilterCoefficients HighShelfBiquadFilterCoefficients(
     float gain);
 
 // The parametric peak filter has a gain of 'gain' at the center frequency,
-// but returns to a gain of 1.0 as you move away from the peak.
+// but returns to a gain of 1.0 as you move away from the peak. The Q of the
+// filter is approximate and corresponds to that of a resonator Hs(s), as
+// computed by BandpassBiquadFilterCoefficients. The parametric peak filter has
+// the transfer function H(s) = 1 + (g - 1)Hs(s).
+// See here (page 8) for some notes on this kind of filter. The precise
+// relationship between bandwidth and Q is quite nontrivial.
+// https://ccrma.stanford.edu/courses/424/handouts.2004/424_Handout22_Filters4_LectureNotes.pdf
+//
+// NOTE: If you were to look at the transfer function on a log-log plot you
+// would find that for the same Q, a filter with gain G (G > 1) is much wider
+// than a filter with gain 1 / G. This is because the typical definition of
+// bandwidth is the distance between the points at which the gain is -3dB from
+// the maximum. In this case, the gain may be less than -3dB, so we could choose
+// some gain-dependent reference (sqrt(G) in the link above).
+//
+// If you are from an audio engineering background, you may find this behavior
+// to be unexpected as digital audio workstations account for this so that
+// the response (which is invariably presented on a log-log scale) for gains
+// G and 1 / G look like the vertical flip of each other. If you expect the
+// response to have this 'vertical flip' property for G < 1, use
+// ParametricPeakBiquadFilterSymmetricCoefficients instead of
+// ParametricPeakBiquadFilterCoefficients. For G > 1, these two functions
+// produce the same filter. For G < 1,
+// ParametricPeakBiquadFilterSymmetricCoefficients produces a wider filter.
 BiquadFilterCoefficients ParametricPeakBiquadFilterCoefficients(
+    float sample_rate_hz,
+    float center_frequency_hz,
+    float Q,
+    float gain);
+
+BiquadFilterCoefficients ParametricPeakBiquadFilterSymmetricCoefficients(
     float sample_rate_hz,
     float center_frequency_hz,
     float Q,

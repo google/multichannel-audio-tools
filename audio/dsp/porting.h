@@ -35,13 +35,10 @@ typedef int64_t int64;
 
 template<typename T> struct MathLimits {
   // Not a number, i.e. result of 0/0.
-  // Present only if !kIsInteger.
   static const T kNaN;
   // Positive infinity, i.e. result of 1/0.
-  // Present only if !kIsInteger.
   static const T kPosInf;
   // Negative infinity, i.e. result of -1/0.
-  // Present only if !kIsInteger.
   static const T kNegInf;
 };
 
@@ -63,7 +60,7 @@ class MathUtil {
                                                  long double *r2);
 };
 
-// Replacing util/symbolize/demangle.h.
+
 // TODO: glog actually includes a demangler function, but it isn't obvious how
 //       to access it with our BUILD setup.
 namespace util {

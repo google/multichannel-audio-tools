@@ -71,20 +71,26 @@ bool EnvelopeDetector::ProcessBlock(const ArrayXXf& input, ArrayXXf* output) {
   prefilter_.ProcessBlock(input, &workspace_);
   // Rectify the signal and smooth to get the RMS envelope.
   workspace_ = workspace_.abs2();
-  envelope_smoother_.ProcessBlock(workspace_, &workspace_);
-
-  // Downsample the signal.
-  Eigen::ArrayXf out;
-  for (int channel = 0; channel < num_channels_; ++channel) {
-    downsamplers_[channel].ProcessSamplesEigen(
-        workspace_.row(channel).matrix(), &out);
-    // Make output the correct shape.
-    if (channel == 0) {
-      output->resize(num_channels_, out.size());
+  if (envelope_sample_rate_hz_ == sample_rate_hz_) {
+    // Bypass downsampling, which may add a few samples of delay for identity
+    // resampling.
+    envelope_smoother_.ProcessBlock(workspace_, output);
+  } else {
+    envelope_smoother_.ProcessBlock(workspace_, &workspace_);
+    // Downsample the signal.
+    Eigen::ArrayXf out;
+    for (int channel = 0; channel < num_channels_; ++channel) {
+      downsamplers_[channel].ProcessSamplesEigen(
+          workspace_.row(channel).matrix(), &out);
+      // Make output the correct shape.
+      if (channel == 0) {
+        output->resize(num_channels_, out.size());
+      }
+      output->row(channel) = out;
     }
-    // Undo the square to obtain the RMS value.
-    output->row(channel) = out.array().max(0).sqrt();
   }
+  // Undo the square to obtain the RMS value.
+  *output = output->array().max(0).sqrt();
   // Store the most recent output so that we always have a level estimate,
   // even when Process didn't have enough input samples to produce any output
   // samples.
