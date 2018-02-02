@@ -153,14 +153,21 @@ struct DynamicRangeControlParams {
 
 // Multichannel, feed-forward dynamic range control. Note that the gain
 // adjustment is the same on each channel.
+//
+// This class is not thread safe.
 class DynamicRangeControl {
  public:
-  explicit DynamicRangeControl(const DynamicRangeControlParams& params);
+  explicit DynamicRangeControl(const DynamicRangeControlParams& initial_params);
 
   // sample_rate_hz is the audio sample rate.
   void Init(int num_channels, int max_block_size_samples, float sample_rate_hz);
 
   void Reset();
+
+  // This should be called in between calls to ProcessBlock. If called multiple
+  // times, only the last call will be used.
+  void SetDynamicRangeControlParams(
+      const DynamicRangeControlParams& params);
 
   // InputType and OutputType are Eigen 2D blocks (ArrayXXf or MatrixXf) or
   // a similar mapped type containing audio samples in column-major format.
@@ -168,6 +175,12 @@ class DynamicRangeControl {
   // must be less than or equal to max_block_size_samples.
   //
   // Templating is necessary for supporting Eigen::Map output types.
+  //
+  // NOTE: When you change params by calling SetDynamicRangeControlParams,
+  // there is a crossfade between a signal generated with the old & new
+  // parameters that happens over the next block (input.cols() samples).
+  // As long as the params changes aren't really large, any block size greater
+  // than 100 or so should not produce significant artifacts.
   template <typename InputType, typename OutputType>
   void ProcessBlock(const InputType& input, OutputType* output) {
     static_assert(std::is_same<typename InputType::Scalar, float>::value,
@@ -175,6 +188,7 @@ class DynamicRangeControl {
     static_assert(std::is_same<typename OutputType::Scalar, float>::value,
                   "Scalar type must be float.");
 
+    DCHECK_GE(input.cols(), 1);
     DCHECK_LE(input.cols(), max_block_size_samples_);
     DCHECK_EQ(input.rows(), num_channels_);
     DCHECK_EQ(input.cols(), output->cols());
@@ -198,11 +212,13 @@ class DynamicRangeControl {
  private:
   using VectorType = Eigen::VectorBlock<Eigen::ArrayXf, Eigen::Dynamic>;
 
-  // Compute the linear gain to apply to the input.
+  // Compute the linear gain to apply to the input. data_ptr should contain
+  // a rectified signal envelope. After calling this function it will contain
+  // a linear gain to apply to the signal.
   void ComputeGain(VectorType* data_ptr);
-  // Defer gain computation to specific types of range control.
-  void ApplyGainControl(const VectorType& input_level,
-                        VectorType* output_gain);
+  // Defer gain computation to specific types of dynamic range control.
+  void ComputeGainForSpecificDynamicRangeControlType(
+      const VectorType& input_level, VectorType* output_gain);
 
   int num_channels_;
   float sample_rate_hz_;
@@ -211,6 +227,10 @@ class DynamicRangeControl {
   Eigen::ArrayXf workspace_;
   Eigen::ArrayXf workspace_drc_output_;
   DynamicRangeControlParams params_;
+  // When parameters change, we need to smoothly transition to them.
+  bool params_change_needed_;
+  DynamicRangeControlParams next_params_;
+
   std::unique_ptr<AttackReleaseEnvelope> envelope_;
 };
 

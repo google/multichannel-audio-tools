@@ -97,15 +97,13 @@ class MultibandCompressorParams {
   int crossover_order_;
   linear_filters::CrossoverType crossover_type_;
 
-  // Parameters that are (or will eventually be) able to be changed on the fly.
+  // Parameters that are able to be changed on the fly.
   std::vector<float> crossover_frequencies_hz_;
   std::vector<DynamicRangeControlParams> drc_params_;
 };
 
 class MultibandCompressor {
  public:
-  // TODO: Once we can change compressor params on the fly, consider
-  // replacing this arg with a SetMultibandCompressorParams function.
   explicit MultibandCompressor(const MultibandCompressorParams& params);
 
   void Init(int num_channels, int max_block_size_samples, float sample_rate_hz);
@@ -120,6 +118,13 @@ class MultibandCompressor {
   void SetCrossoverFrequencies(
       const std::vector<float>& crossover_frequencies_hz) {
     band_splitter_.SetCrossoverFrequencies(crossover_frequencies_hz);
+  }
+
+  void SetDynamicRangeControlParams(int stage,
+                                    const DynamicRangeControlParams& params) {
+    CHECK_GE(stage, 0);
+    CHECK_LT(stage, per_band_drc_.size());
+    per_band_drc_[stage].SetDynamicRangeControlParams(params);
   }
 
   // Process a block of samples. input is a 2D Eigen array with contiguous

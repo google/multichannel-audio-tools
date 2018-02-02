@@ -335,6 +335,19 @@ TEST(DynamicRangeControl, CompressesSignalTest) {
   }
 }
 
+TEST(DynamicRangeControl, ZeroTest) {
+  constexpr int kNumChannels = 1;
+  constexpr int kNumSamples = 400;
+
+  Eigen::ArrayXXf input = Eigen::ArrayXXf::Zero(kNumChannels, kNumSamples);
+  Eigen::ArrayXXf output(kNumChannels, kNumSamples);
+
+  DynamicRangeControlParams params;
+  DynamicRangeControl drc(params);
+  drc.Init(kNumChannels, kNumSamples, 48000.0f);
+  // Make sure we pass the check that data is finite.
+  drc.ProcessBlock(input, &output);
+}
 
 TEST(DynamicRangeControl, ResetTest) {
   constexpr int kNumChannels = 1;
@@ -352,6 +365,50 @@ TEST(DynamicRangeControl, ResetTest) {
   drc.ProcessBlock(input, &output2);
 
   EXPECT_THAT(output1, EigenArrayNear(output2, 1e-6));
+}
+
+TEST(DynamicRangeControl, InterpolatesCoeffsTest) {
+  constexpr int kNumChannels = 1;
+  constexpr int kNumSamples = 400;
+
+  Eigen::ArrayXXf input = Eigen::ArrayXXf::Random(kNumChannels, kNumSamples);
+  Eigen::ArrayXXf before_output(kNumChannels, kNumSamples);
+  Eigen::ArrayXXf after_output(kNumChannels, kNumSamples);
+  Eigen::ArrayXXf interp_output(kNumChannels, kNumSamples);
+
+  DynamicRangeControlParams before_params =
+      DynamicRangeControlParams::ReasonableCompressorParams();
+  DynamicRangeControlParams after_params =
+      DynamicRangeControlParams::ReasonableLimiterParams();
+  // We aren't testing the envelope interpolation here. Make time constants
+  // small enough that filter behavior is negligable.
+  before_params.attack_s = 1e-6;
+  after_params.attack_s = 1e-6;
+  before_params.release_s = 1e-6;
+  after_params.release_s = 1e-6;
+  DynamicRangeControl before_drc(before_params);
+  DynamicRangeControl after_drc(after_params);
+
+  DynamicRangeControl interp_drc(before_params);
+
+  before_drc.Init(kNumChannels, kNumSamples, 48000.0f);
+  after_drc.Init(kNumChannels, kNumSamples, 48000.0f);
+  interp_drc.Init(kNumChannels, kNumSamples, 48000.0f);
+  before_drc.ProcessBlock(input, &before_output);
+  after_drc.ProcessBlock(input, &after_output);
+  // First block should look like "before" samples.
+  interp_drc.ProcessBlock(input, &interp_output);
+  EXPECT_THAT(interp_output, EigenArrayNear(before_output, 1e-6));
+
+  interp_drc.SetDynamicRangeControlParams(after_params);
+  // Clear out the state. Coefficient switch happens during this block.
+  interp_drc.ProcessBlock(Eigen::ArrayXXf::Zero(kNumChannels, kNumSamples),
+                          &interp_output);
+
+  // Process the input block again.
+  interp_drc.ProcessBlock(input, &interp_output);
+  // Third block should look like "after" samples. Note looser tolerance.
+  EXPECT_THAT(interp_output, EigenArrayNear(after_output, 1e-4));
 }
 
 TEST(DynamicRangeControl, InPlaceTest) {

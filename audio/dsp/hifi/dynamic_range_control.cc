@@ -23,13 +23,20 @@ namespace audio_dsp {
 
 using ::Eigen::ArrayXf;
 
-DynamicRangeControl::DynamicRangeControl(
-    const DynamicRangeControlParams& params)
-      : params_(params) {
+namespace {
+void VerifyParams(const DynamicRangeControlParams& params) {
   CHECK_GE(params.knee_width_db, 0);
   CHECK_GT(params.ratio, 0);
   CHECK_GT(params.attack_s, 0);
   CHECK_GT(params.release_s, 0);
+}
+}  // anonymous
+
+DynamicRangeControl::DynamicRangeControl(
+    const DynamicRangeControlParams& initial_params)
+      : params_(initial_params),
+        params_change_needed_(false) {
+  VerifyParams(initial_params);
 }
 
 void DynamicRangeControl::Init(int num_channels, int max_block_size_samples,
@@ -47,34 +54,67 @@ void DynamicRangeControl::Init(int num_channels, int max_block_size_samples,
                                             sample_rate_hz_));
 }
 
+void DynamicRangeControl::SetDynamicRangeControlParams(
+    const DynamicRangeControlParams& params) {
+  VerifyParams(params);
+  next_params_ = params;
+  // Update envelope time constants now. The rest will get interpolated via
+  // crossfade.
+  envelope_->SetAttackTimeSeconds(next_params_.attack_s);
+  envelope_->SetReleaseTimeSeconds(next_params_.release_s);
+  params_change_needed_ = true;
+}
+
 void DynamicRangeControl::Reset() {
   envelope_->Reset();
 }
 
 void DynamicRangeControl::ComputeGain(VectorType* data_ptr) {
+  // Most of the computation for this function happens in-place on *data_ptr.
   VectorType& data = *data_ptr;
   for (int i = 0; i < data.rows(); ++i) {
-    data[i] = envelope_->Output(data[i]);  // Calls abs().
+    // Occasionally a negative will come up due to numerical imprecision.
+    // Apply attack/release smoothing.
+    data[i] = std::max(1e-12f, envelope_->Output(data[i]));
   }
   // Convert to decibels.
   // TODO: Consider downsampling the envelope by an integer factor
   // to 8k or lower.
   if (params_.envelope_type == kRms) {
-    PowerRatioToDecibels(data + 1e-12f, &data);
+    PowerRatioToDecibels(data /* rectified envelope */,
+                         &data /* signal level in decibels */);
   } else {
-    AmplitudeRatioToDecibels(data + 1e-12f, &data);
+    AmplitudeRatioToDecibels(data /* rectified envelope */,
+                             &data /* signal level in decibels */);
   }
   // Store the gain computation in the workspace.
-  VectorType workspace_map = workspace_drc_output_.head(data.size());
-  ApplyGainControl(data, &workspace_map);
-  workspace_map += params_.output_gain_db;
+  VectorType signal_gain_db = workspace_drc_output_.head(data.size());
+  ComputeGainForSpecificDynamicRangeControlType(
+      data /* signal level in decibels */, &signal_gain_db);
+  signal_gain_db += params_.output_gain_db;
 
+  if (params_change_needed_) {
+    params_ = next_params_;
+    VectorType interp_signal_gain_db =
+        workspace_drc_output_.head(data.size());
+    ComputeGainForSpecificDynamicRangeControlType(
+        data /* signal level in decibels */, &interp_signal_gain_db);
+    interp_signal_gain_db += params_.output_gain_db;
+    params_change_needed_ = false;
+
+    const float data_size_inv = 1.0f / data.size();
+    float k = 0;
+    for (int i = 0; i < data.size(); ++i) {
+      k += data_size_inv;
+      signal_gain_db[i] += k * (interp_signal_gain_db[i] - signal_gain_db[i]);
+    }
+  }
   // Convert back to linear.
-  DecibelsToAmplitudeRatio(workspace_map, &data);
+  DecibelsToAmplitudeRatio(signal_gain_db, &data /* linear gain */);
   DCHECK(data.allFinite());
 }
 
-void DynamicRangeControl::ApplyGainControl(
+void DynamicRangeControl::ComputeGainForSpecificDynamicRangeControlType(
     const VectorType& input_level, VectorType* output_gain) {
   switch (params_.dynamics_type) {
     case kCompressor:
