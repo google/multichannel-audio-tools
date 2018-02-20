@@ -51,6 +51,15 @@ class MultibandCompressorParams {
     SetCrossoverFrequencies(frequencies_hz);
   }
 
+  // This sets all stages to the same lookahead time; if you want different
+  // lookahead times for different stages, change
+  // MutableDynamicRangeControlParams(stage_index)->lookahead_s.
+  void SetLookaheadSeconds(float lookahead_s) {
+    for (DynamicRangeControlParams& params : drc_params_) {
+      params.lookahead_s = lookahead_s;
+    }
+  }
+
   void SetCrossoverFrequencies(const std::vector<float>& frequencies_hz) {
     CHECK_EQ(frequencies_hz.size(), num_bands_ - 1);
     crossover_frequencies_hz_ = frequencies_hz;
@@ -60,7 +69,7 @@ class MultibandCompressorParams {
     return crossover_frequencies_hz_;
   }
 
-  // stage must be less than or equal to num_bands_.
+  // stage must be less than to num_bands_.
   DynamicRangeControlParams* MutableDynamicRangeControlParams(int stage) {
     CHECK_GE(stage, 0);
     CHECK_LT(stage, num_bands_);

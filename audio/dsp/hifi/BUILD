@@ -15,6 +15,7 @@ cc_library(
         ":dynamic_range_control_functions",
         "//audio/dsp:attack_release_envelope",
         "//audio/dsp:decibels",
+        "//audio/dsp:fixed_delay_line",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
     ],

@@ -27,12 +27,77 @@
 //
 // All measures with units in decibels are with reference to unity. This
 // is commonly called dB full-scale (dBFS).
+//
+// Usage:
+//
+//  /* Get everything setup. */
+//  DynamicRangeControl drc(...);
+//  /**
+//   *  Block size has no effect on output unless changing DRC params
+//   * (interpolation happens over a single block).
+//   */
+//  const int kFramesPerBlock = 512;
+//  drc.Init(num_channels, kFramesPerBlock, sample_rate_hz);
+//
+// /* Get input samples from somewhere and allocate space for output. */
+// std::vector<float> input_samples = GetInterleavedAudioSamples();
+// std::vector<float> output_samples(input_samples.size());
+//
+// /**
+//  * Note that ProcessBlock(), ProcessBlockWithSidechain(), and
+//  * ComputeGainSignalOnly()/ApplyGainToSignal() all have the same effect
+//  * on the state of the object. It is expected that you will use only one of
+//  * the following configurations for any initialization of
+//  * DynamicRangeControl. Below are three examples of how to use this class to
+//  * do block processing.
+//  */
+//
+//  /** Option 1: Typical Use. */
+//
+//  for (int i = 0; i < rounded_block_size; i += kSamplesPerFrame) {
+//    Map<const ArrayXXf> input_block(input_samples.data() + i,
+//                                    num_channels, kFramesPerBlock);
+//    Map<ArrayXXf> output_block(output_samples.data() + i,
+//                               num_channels, kFramesPerBlock);
+//    drc.ProcessBlock(input_block, &output_block);
+//  }
+//
+//  /** Option 2: Sidechain gain control. */
+//  std::vector<float> sidechain_samples = GetInterleavedSidechainAudio();
+//  for (int i = 0; i < rounded_block_size; i += kSamplesPerFrame) {
+//    Map<const ArrayXXf> input_block(...);  /* Same as above. */
+//    Map<const ArrayXXf> sidechain_block(sidechain_samples.data() + i,
+//                                        num_channels, kFramesPerBlock);
+//    Map<ArrayXXf> output_block(...);       /* Same as above. */
+//    drc.ProcessBlock(input_block, sidechain_block, &output_block);
+//  }
+//
+//  /**
+//   * Option 3: Do additional processing on gain signal before applying.
+//   *           Note that this is compatible with sidechaining.
+//   */
+//  std::vector<float> gain_samples(kSamplesPerFrame);
+//  for (int i = 0; i < rounded_block_size; i += kSamplesPerFrame) {
+//    Map<const ArrayXXf> input_block(...);  /* Same as above. */
+//    Map<ArrayXf> gain_block(gain_samples.data(), 1,
+//                            kSamplesPerFrame / num_channels);
+//    Map<ArrayXXf> output_block(...);       /* Same as above. */
+//    /* To do sidechaining, use sidechain_block instead of input_block. */
+//    drc.ComputeGainSignalOnly(input_block, &gain_signal);
+//    /** This is a convenient way to implement cross-coupling between
+//     *  different filterbank channels in a multiband compressor.
+//     */
+//    DoSomethingWithGain(&gain_signal);
+//    drc.ApplyGainToSignal(input_block, gain_signal, &output_block);
+//  }
+
 #ifndef AUDIO_DSP_HIFI_DYNAMIC_RANGE_CONTROL_H_
 #define AUDIO_DSP_HIFI_DYNAMIC_RANGE_CONTROL_H_
 
 #include <memory>
 
 #include "audio/dsp/attack_release_envelope.h"
+#include "audio/dsp/fixed_delay_line.h"
 #include "glog/logging.h"
 #include "third_party/eigen3/Eigen/Core"
 
@@ -80,7 +145,8 @@ struct DynamicRangeControlParams {
         ratio(1),
         knee_width_db(0),
         attack_s(0.001f),
-        release_s(0.05f) {}
+        release_s(0.05f),
+        lookahead_s(0) {}
 
   // See NOTE above.
   static DynamicRangeControlParams ReasonableCompressorParams() {
@@ -149,6 +215,13 @@ struct DynamicRangeControlParams {
   // on the application, these may range from 1ms to over 1s.
   float attack_s;
   float release_s;
+
+  // The following parameters must not change after initialization:
+
+  // Delay the incoming audio to make the gain control more predictive.
+  // This has the effect of delaying the audio output (advancing the compression
+  // action relative to the signal).
+  float lookahead_s;
 };
 
 // Multichannel, feed-forward dynamic range control. Note that the gain
@@ -183,7 +256,20 @@ class DynamicRangeControl {
   // than 100 or so should not produce significant artifacts.
   template <typename InputType, typename OutputType>
   void ProcessBlock(const InputType& input, OutputType* output) {
+    ProcessBlockWithSidechain(input, input, output);
+  }
+
+  // Process samples using a sidechain signal to determine the applied gain.
+  // See header comments. The sidechain signal is used to generate the
+  // gain envelope and compute the gain that will be applied to the input
+  // signal.
+  template <typename InputType, typename SidechainType, typename OutputType>
+  void ProcessBlockWithSidechain(const InputType& input,
+                                 const SidechainType& sidechain,
+                                 OutputType* output) {
     static_assert(std::is_same<typename InputType::Scalar, float>::value,
+                  "Scalar type must be float.");
+    static_assert(std::is_same<typename SidechainType::Scalar, float>::value,
                   "Scalar type must be float.");
     static_assert(std::is_same<typename OutputType::Scalar, float>::value,
                   "Scalar type must be float.");
@@ -193,20 +279,47 @@ class DynamicRangeControl {
     DCHECK_EQ(input.rows(), num_channels_);
     DCHECK_EQ(input.cols(), output->cols());
     DCHECK_EQ(input.rows(), output->rows());
+    DCHECK_EQ(input.cols(), sidechain.cols());
+    DCHECK_EQ(input.rows(), sidechain.rows());
 
     // Map the needed amount of space for computations.
-    VectorType workmap = workspace_.head(input.cols());
+    VectorType workmap = workspace_.head(sidechain.cols());
 
+    ComputeGainSignalOnly(sidechain, &workmap);
+    ApplyGainToSignal(input, workmap, output);
+  }
+
+  // Compute the gains that would be applied to the signal so that more
+  // processing can be done prior to applying them. See header comments.
+  //
+  // gain is a monaural signal, with length input_or_sidechain.cols(). Note that
+  // if GainType is not resizable, it must be presized to the right size.
+  template <typename InputType, typename GainType>
+  void ComputeGainSignalOnly(const InputType& input_or_sidechain,
+                             GainType* gain) {
+    DCHECK_LE(input_or_sidechain.cols(), max_block_size_samples_);
+    gain->resize(input_or_sidechain.cols(), 1);
     // Compute the average power/amplitude across channels. The signal envelope
     // is monaural.
     if (params_.envelope_type == kRms) {
-      workmap = input.square().colwise().mean();
+      *gain = input_or_sidechain.square().colwise().mean();
     } else {
-      workmap = input.abs().colwise().mean();
+      *gain = input_or_sidechain.abs().colwise().mean();
     }
-    ComputeGain(&workmap);
+    ComputeGainFromDetectedSignal(gain);
+  }
+
+  // To be used with ComputeGainSignalOnly above. See header comments.
+  // In-place processing is supported (&input = output).
+  template <typename GainType, typename InputType, typename OutputType>
+  void ApplyGainToSignal(const InputType& input,
+                         const GainType& gain,
+                         OutputType* output) {
+    DCHECK_EQ(input.cols(), gain.size());
     // Scale the input sample-wise by the gains.
-    *output = input.rowwise() * workmap.transpose();
+    Eigen::Map<const Eigen::ArrayXXf> delayed =
+        lookahead_delay_.ProcessBlock(input);
+    *output = delayed.rowwise() * gain.transpose();
   }
 
  private:
@@ -215,7 +328,7 @@ class DynamicRangeControl {
   // Compute the linear gain to apply to the input. data_ptr should contain
   // a rectified signal envelope. After calling this function it will contain
   // a linear gain to apply to the signal.
-  void ComputeGain(VectorType* data_ptr);
+  void ComputeGainFromDetectedSignal(VectorType* data_ptr);
   // Defer gain computation to specific types of dynamic range control.
   void ComputeGainForSpecificDynamicRangeControlType(
       const VectorType& input_level, VectorType* output_gain);
@@ -231,6 +344,7 @@ class DynamicRangeControl {
   bool params_change_needed_;
   DynamicRangeControlParams next_params_;
 
+  FixedDelayLine lookahead_delay_;
   std::unique_ptr<AttackReleaseEnvelope> envelope_;
 };
 

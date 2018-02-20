@@ -144,6 +144,28 @@ cc_test(
 )
 
 cc_library(
+    name = "fixed_delay_line",
+    hdrs = ["fixed_delay_line.h"],
+    deps = [
+        ":porting",
+        "@com_github_glog_glog//:glog",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_test(
+    name = "fixed_delay_line_test",
+    srcs = ["fixed_delay_line_test.cc"],
+    deps = [
+        ":fixed_delay_line",
+        ":porting",
+        ":testing_util",
+        "@gtest//:gtest_main",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_library(
     name = "nelder_mead_searcher",
     hdrs = ["nelder_mead_searcher.h"],
     deps = [

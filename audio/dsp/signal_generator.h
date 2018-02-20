@@ -21,6 +21,7 @@
 
 #include <cmath>
 #include <complex>
+#include <random>
 #include <vector>
 
 #include "glog/logging.h"

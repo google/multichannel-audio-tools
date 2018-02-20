@@ -19,6 +19,7 @@
 #include <cfloat>
 #include <cmath>
 #include <complex>
+#include <random>
 #include <vector>
 
 #include "audio/dsp/testing_util.h"
@@ -38,6 +39,7 @@ namespace {
 
 using ::audio_dsp::EigenArrayNear;
 using ::Eigen::Array;
+using ::Eigen::Array2Xf;
 using ::Eigen::ArrayXf;
 using ::Eigen::ArrayXXf;
 using ::Eigen::Dynamic;
@@ -56,6 +58,66 @@ struct Tolerance { constexpr static float value = 0; };
 
 template <> struct Tolerance<float> { constexpr static float value = 1e-4; };
 template <> struct Tolerance<double> { constexpr static double value = 1e-8; };
+
+#ifndef NDEBUG
+// Ensure that maps with inner strides crash.
+// ProcessBlock is covered in biquad_filter_test.
+TEST(LadderFilterDeathTest, ProcessSampleXCrashesOnInnerStrideOutput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  LadderFilter<ArrayXXf> filter;
+  filter.InitFromTransferFunction(kNumChannels, {1, 0, 0}, {1, 0, 0});
+
+  ArrayXXf output(kNumChannels, 2);
+  ArrayXXf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<ArrayXXf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     1);
+
+  ASSERT_DEATH(filter.ProcessSample(data.col(0), &map), "inner stride");
+}
+
+TEST(LadderFilterDeathTest, ProcessSampleXCrashesOnInnerStrideInput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  LadderFilter<ArrayXXf> filter;
+  filter.InitFromTransferFunction(kNumChannels, {1, 0, 0}, {1, 0, 0});
+
+  ArrayXf output(kNumChannels);
+  ArrayXXf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<ArrayXXf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     2);
+
+  ASSERT_DEATH(filter.ProcessSample(map.col(0), &output), "inner stride");
+}
+
+TEST(LadderFilterDeathTest, ProcessSampleNCrashesOnInnerStrideOutput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  LadderFilter<Array2Xf> filter;
+  filter.InitFromTransferFunction(kNumChannels, {1, 0, 0}, {1, 0, 0});
+
+  Array2Xf output(kNumChannels, 2);
+  Array2Xf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<Array2Xf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     1);
+
+  ASSERT_DEATH(filter.ProcessSample(data.col(0), &map), "inner stride");
+}
+
+TEST(LadderFilterDeathTest, ProcessSampleNCrashesOnInnerStrideInput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  LadderFilter<ArrayXXf> filter;
+  filter.InitFromTransferFunction(kNumChannels, {1, 0, 0}, {1, 0, 0});
+
+  ArrayXf output(kNumChannels);
+  ArrayXXf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<ArrayXXf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     2);
+
+  ASSERT_DEATH(filter.ProcessSample(map.col(0), &output), "inner stride");
+}
+#endif  // NDEBUG
 
 template <typename T>
 class LadderFilterScalarTypedTest : public ::testing::Test {};
@@ -125,6 +187,28 @@ TYPED_TEST(LadderFilterScalarTypedTest, LadderInit) {
     TypeParam sample = dist(rng);
     TypeParam ladder_output;
     ladder.ProcessSample(sample, &ladder_output);
+  }
+}
+
+TEST(LadderFilterScalarTypedTest, LadderIdentityFilter) {
+  LadderFilter<double> ladder;
+
+  std::vector<double> coeffs_b = {1.0, 0.0, 0.0};
+  std::vector<double> coeffs_a = {1.0, 0.0, 0.0};
+  std::vector<double> coeffs_k;
+  std::vector<double> coeffs_v;
+  MakeLadderCoefficientsFromTransferFunction(coeffs_b, coeffs_a,
+                                             &coeffs_k, &coeffs_v);
+  EXPECT_THAT(coeffs_k, testing::ContainerEq(std::vector<double>{0, 0}));
+  ladder.InitFromLadderCoeffs(1, coeffs_k, coeffs_v);
+
+  std::mt19937 rng(0 /* seed */);
+  std::normal_distribution<double> dist(0, 1);
+  for (int i = 0; i < 300; ++i) {
+    double sample = dist(rng);
+    double ladder_output;
+    ladder.ProcessSample(sample, &ladder_output);
+    EXPECT_NEAR(sample, ladder_output, 1e-5);
   }
 }
 
@@ -388,51 +472,51 @@ CPU: Intel Sandybridge with HyperThreading (16 cores)
 Benchmark                           Time(ns)        CPU(ns)     Iterations
 --------------------------------------------------------------------------
 // Without Smoothing
-BM_LadderFilterScalarFloat<false>       9508           9495         740083
+BM_LadderFilterScalarFloat<false>      10798          10785         648910
 // With Smoothing
-BM_LadderFilterScalarFloat<true>       21496          21471         325679
+BM_LadderFilterScalarFloat<true>       23546          23514         296014
 // Without Smoothing
-BM_LadderFilterArrayXf<false>/1        42159          42106         165833
-BM_LadderFilterArrayXf<false>/2        57080          57013         100000
-BM_LadderFilterArrayXf<false>/3        61796          61725         100000
-BM_LadderFilterArrayXf<false>/4        52066          51995         100000
-BM_LadderFilterArrayXf<false>/5        88576          88466          79194
-BM_LadderFilterArrayXf<false>/6        90095          89985          78313
-BM_LadderFilterArrayXf<false>/7       102595         102464          68312
-BM_LadderFilterArrayXf<false>/8        95392          95276          73926
-BM_LadderFilterArrayXf<false>/9       116094         115953          59707
-BM_LadderFilterArrayXf<false>/10      118117         117957          59400
+BM_LadderFilterArrayXf<false>/1        45927          45864         148129
+BM_LadderFilterArrayXf<false>/2        58594          58509         100000
+BM_LadderFilterArrayXf<false>/3        66637          66548         100000
+BM_LadderFilterArrayXf<false>/4        68580          68484         100000
+BM_LadderFilterArrayXf<false>/5        89917          89790          78060
+BM_LadderFilterArrayXf<false>/6        96007          95865          73105
+BM_LadderFilterArrayXf<false>/7       107780         107645          65079
+BM_LadderFilterArrayXf<false>/8       100637         100487          69824
+BM_LadderFilterArrayXf<false>/9       121341         121155          57750
+BM_LadderFilterArrayXf<false>/10      125594         125412          55950
 // With Smoothing
-BM_LadderFilterArrayXf<true>/1         55712          55642         100000
-BM_LadderFilterArrayXf<true>/2         68701          68614         100000
-BM_LadderFilterArrayXf<true>/3         73837          73745          93965
-BM_LadderFilterArrayXf<true>/4         64988          64899         100000
-BM_LadderFilterArrayXf<true>/5        101415         101293          68447
-BM_LadderFilterArrayXf<true>/6        103407         103265          67532
-BM_LadderFilterArrayXf<true>/7        115700         115553          60688
-BM_LadderFilterArrayXf<true>/8        107713         107568          65265
-BM_LadderFilterArrayXf<true>/9        129464         129290          54210
-BM_LadderFilterArrayXf<true>/10       131808         131624          53141
+BM_LadderFilterArrayXf<true>/1         59495          59414         100000
+BM_LadderFilterArrayXf<true>/2         71644          71538          97357
+BM_LadderFilterArrayXf<true>/3         80983          80855          86763
+BM_LadderFilterArrayXf<true>/4         82802          82683          85074
+BM_LadderFilterArrayXf<true>/5        105808         105660          66139
+BM_LadderFilterArrayXf<true>/6        111400         111244          62859
+BM_LadderFilterArrayXf<true>/7        123522         123346          56632
+BM_LadderFilterArrayXf<true>/8        116607         116421          59819
+BM_LadderFilterArrayXf<true>/9        137115         136906          50875
+BM_LadderFilterArrayXf<true>/10       140538         140302          49863
 // Without Smoothing
-BM_LadderFilterArrayNf<1, false>       10709          10696         654390
-BM_LadderFilterArrayNf<2, false>       15208          15186         462941
-BM_LadderFilterArrayNf<3, false>       20715          20687         340574
-BM_LadderFilterArrayNf<4, false>       11568          11534         621362
-BM_LadderFilterArrayNf<5, false>       31342          31220         216525
-BM_LadderFilterArrayNf<6, false>       34849          34803         201868
-BM_LadderFilterArrayNf<7, false>       39080          39031         179947
-BM_LadderFilterArrayNf<8, false>       44369          44311         157545
-BM_LadderFilterArrayNf<9, false>       72032          71941          97352
-BM_LadderFilterArrayNf<10, false>      76978          76875          91614
+BM_LadderFilterArrayNf<1, false>       11434          11418         614886
+BM_LadderFilterArrayNf<2, false>       17536          17512         398564
+BM_LadderFilterArrayNf<3, false>       23380          23348         301532
+BM_LadderFilterArrayNf<4, false>       23843          23812         293993
+BM_LadderFilterArrayNf<5, false>       31686          31638         221157
+BM_LadderFilterArrayNf<6, false>       36910          36849         189688
+BM_LadderFilterArrayNf<7, false>       44204          44134         158793
+BM_LadderFilterArrayNf<8, false>       47177          47100         148575
+BM_LadderFilterArrayNf<9, false>       66160          66055         100000
+BM_LadderFilterArrayNf<10, false>      66245          66142         100000
 // With Smoothing
-BM_LadderFilterArrayNf<1, true>        22882          22854         307404
-BM_LadderFilterArrayNf<2, true>        27208          27174         257384
-BM_LadderFilterArrayNf<3, true>        32613          32575         215070
-BM_LadderFilterArrayNf<4, true>        23405          23375         299919
-BM_LadderFilterArrayNf<5, true>        41768          41715         167998
-BM_LadderFilterArrayNf<6, true>        46440          46385         151150
-BM_LadderFilterArrayNf<7, true>        51039          50973         100000
-BM_LadderFilterArrayNf<8, true>        56126          56048         100000
-BM_LadderFilterArrayNf<9, true>        84887          84774          82946
-BM_LadderFilterArrayNf<10, true>       89664          89553          78841
+BM_LadderFilterArrayNf<1, true>        24169          24138         291159
+BM_LadderFilterArrayNf<2, true>        30826          30773         226611
+BM_LadderFilterArrayNf<3, true>        36160          36102         194426
+BM_LadderFilterArrayNf<4, true>        36711          36651         189847
+BM_LadderFilterArrayNf<5, true>        44581          44512         158154
+BM_LadderFilterArrayNf<6, true>        49466          49386         141126
+BM_LadderFilterArrayNf<7, true>        56954          56887         100000
+BM_LadderFilterArrayNf<8, true>        61420          61335         100000
+BM_LadderFilterArrayNf<9, true>        79584          79457          88092
+BM_LadderFilterArrayNf<10, true>       80726          80587          86785
 */

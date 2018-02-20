@@ -40,8 +40,8 @@ void ForceStability(CoeffVectorType* reflection_ptr) {
   // Written with negative logic to catch NaNs.
   for (int m = 0; m < reflection.size(); ++m) {
     if (!(std::abs(reflection[m]) < 1.0)) {
-      DLOG(WARNING) << "Computed ladder filter coefficient (" << reflection[m]
-          << ") magnitude exceeds 1.";
+      DLOG_EVERY_N(WARNING, 1000) << "LOG_EVERY_N(1000): Computed ladder " <<
+          "filter coefficient (" << reflection[m] << ") magnitude exceeds 1.";
       if (reflection[m] > 0) {
         reflection[m] = 1 - 10 * std::numeric_limits<ScalarType>::epsilon();
       } else {
@@ -252,6 +252,11 @@ void LadderFilter<_SampleType>::ProcessSample(const InputType& input,
     // channels with Eigen.
     DCHECK_EQ(Traits::AsEigenArray(input).rows(), num_channels_);
     Traits::AsMutableEigenArray(output)->resize(num_channels_);
+    DCHECK_EQ(Traits::AsEigenArray(input).innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
+    DCHECK_EQ(Traits::AsMutableEigenArray(output)->innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
+
     const InputScalarType* input_data = Traits::GetData(input);
     for (int channel = 0; channel < num_channels_; ++channel) {
       AccumType stage_input = input_data[channel];
@@ -284,6 +289,10 @@ void LadderFilter<_SampleType>::ProcessSample(const InputType& input,
     // fast matrix-vector multiplication for parts of this computation.
     DCHECK_EQ(num_channels_, kFixedNumChannels);
     DCHECK_EQ(Traits::AsEigenArray(input).rows(), kFixedNumChannels);
+    DCHECK_EQ(Traits::AsEigenArray(input).innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
+    DCHECK_EQ(Traits::AsMutableEigenArray(output)->innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
 
     Eigen::Matrix<AccumType, kFixedNumChannels, 1> stage_input;
     stage_input =

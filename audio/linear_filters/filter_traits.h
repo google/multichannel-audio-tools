@@ -240,20 +240,17 @@ struct FilterTraits<_SampleType, true> {
             typename InputType, typename OutputType>
   static inline void ProcessBlockFixed(
       FilterType* filter, const InputType& input, OutputType* output) {
-    // Map input and output with kFixedNumChannels to ensure that
-    // ProcessSamples() knows the number of channels at compile time (necessary
-    // e.g. for the special cases in ProcessBlockDynamicHelper).
-    Eigen::Map<const Eigen::Array<typename InputType::Scalar,
-        kFixedNumChannels, InputType::ColsAtCompileTime>>
-            input_map(input.data(), kFixedNumChannels, input.cols());
-    Eigen::Map<Eigen::Array<typename OutputType::Scalar,
-        kFixedNumChannels, OutputType::ColsAtCompileTime>>
-            output_map(output->data(), kFixedNumChannels, output->cols());
-    Eigen::Array<typename OutputType::Scalar,
-        kFixedNumChannels, 1> output_sample(input_map.rows());
-    for (int n = 0; n < input_map.cols(); ++n) {
-      filter->ProcessSample(input_map.col(n), &output_sample);
-      output_map.col(n) = output_sample;
+    for (int n = 0; n < input.cols(); ++n) {
+      // Map input and output with kFixedNumChannels to ensure that
+      // ProcessSamples() knows the number of channels at compile time
+      // (Necessary e.g. for the special cases in ProcessBlockDynamicHelper).
+      Eigen::Map<
+          const Eigen::Array<typename InputType::Scalar, kFixedNumChannels, 1>>
+          input_sample(input.col(n).data(), kFixedNumChannels, 1);
+      Eigen::Map<
+          Eigen::Array<typename OutputType::Scalar, kFixedNumChannels, 1>>
+          output_sample(output->col(n).data(), kFixedNumChannels, 1);
+      filter->ProcessSample(input_sample, &output_sample);
     }
   }
 
@@ -269,10 +266,15 @@ struct FilterTraits<_SampleType, true> {
       // number of rows at compile time for 10x performance improvement. The
       // switch statement makes special cases to do this for 1 to 4 channels.
 
+      if (filter->num_channels() == 1) {
+        ProcessBlockFixed<1>(filter, input, output);
+        return;
+      }
+      CHECK_EQ(input.innerStride(), 1)
+          << "Cannot operate on map with inner stride.";
+      CHECK_EQ(output->innerStride(), 1)
+          << "Cannot operate on map with inner stride.";
       switch (filter->num_channels()) {
-        case 1:
-          ProcessBlockFixed<1>(filter, input, output);
-          break;
         case 2:
           ProcessBlockFixed<2>(filter, input, output);
           break;

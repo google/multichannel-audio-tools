@@ -182,6 +182,9 @@ class BiquadFilter {
   // contiguous data like ArrayXf. Init() must be called before calling this
   // function.
   //
+  // Note that ProcessSample will result in a memory corruption if used on a
+  // type with innerStride != 1. This can be caught by running in debug mode.
+  //
   // Example use:
   //   /* Scalar filter. */
   //   float input_sample = ...;

@@ -30,7 +30,7 @@ void VerifyParams(const DynamicRangeControlParams& params) {
   CHECK_GT(params.attack_s, 0);
   CHECK_GT(params.release_s, 0);
 }
-}  // anonymous
+}  // namespace
 
 DynamicRangeControl::DynamicRangeControl(
     const DynamicRangeControlParams& initial_params)
@@ -52,6 +52,9 @@ void DynamicRangeControl::Init(int num_channels, int max_block_size_samples,
   envelope_.reset(new AttackReleaseEnvelope(params_.attack_s,
                                             params_.release_s,
                                             sample_rate_hz_));
+  int lookahead_samples = std::round(params_.lookahead_s * sample_rate_hz);
+  lookahead_delay_.Init(
+      num_channels, lookahead_samples, max_block_size_samples);
 }
 
 void DynamicRangeControl::SetDynamicRangeControlParams(
@@ -63,13 +66,16 @@ void DynamicRangeControl::SetDynamicRangeControlParams(
   envelope_->SetAttackTimeSeconds(next_params_.attack_s);
   envelope_->SetReleaseTimeSeconds(next_params_.release_s);
   params_change_needed_ = true;
+  CHECK_EQ(params.lookahead_s, params_.lookahead_s)
+      << "This parameter cannot be changed without reinitializing the "
+         "DynamicRangeControl. Please call Init(...) again.";
 }
 
 void DynamicRangeControl::Reset() {
   envelope_->Reset();
 }
 
-void DynamicRangeControl::ComputeGain(VectorType* data_ptr) {
+void DynamicRangeControl::ComputeGainFromDetectedSignal(VectorType* data_ptr) {
   // Most of the computation for this function happens in-place on *data_ptr.
   VectorType& data = *data_ptr;
   for (int i = 0; i < data.rows(); ++i) {
@@ -88,6 +94,9 @@ void DynamicRangeControl::ComputeGain(VectorType* data_ptr) {
                              &data /* signal level in decibels */);
   }
   // Store the gain computation in the workspace.
+  // A second workspace variable is needed because data is actually workspace_
+  // under typical use. Note that the following line is creating a block type
+  // and not allocating something significant.
   VectorType signal_gain_db = workspace_drc_output_.head(data.size());
   ComputeGainForSpecificDynamicRangeControlType(
       data /* signal level in decibels */, &signal_gain_db);
@@ -139,8 +148,8 @@ void DynamicRangeControl::ComputeGainForSpecificDynamicRangeControlType(
       // 1000dB of suppression is way more than enough for any use case.
       constexpr float kInfiniteRatio = 1000;
       OutputLevelExpander(
-          input_level + params_.input_gain_db, kInfiniteRatio,
-          params_.threshold_db, params_.knee_width_db, output_gain);
+          input_level + params_.input_gain_db, params_.threshold_db,
+          kInfiniteRatio, params_.knee_width_db, output_gain);
       break;
   }
   // Compute the gain to apply rather than the output level.

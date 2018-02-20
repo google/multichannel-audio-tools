@@ -99,6 +99,16 @@ float OutputLevelExpander(float input, float threshold,
   return output_arr.value();
 }
 
+float OutputLevelNoiseGate(float input, float threshold, float knee) {
+  Eigen::ArrayXf input_arr(1);
+  Eigen::ArrayXf output_arr(1);
+  input_arr[0] = input;
+  constexpr float kRatio = 1000.0f;
+  ::audio_dsp::OutputLevelExpander(input_arr, threshold, kRatio, knee,
+                                   &output_arr);
+  return output_arr.value();
+}
+
 TEST(ComputeGainTest, CompressorTest) {
   // No knee, above the threshold.
   EXPECT_FLOAT_EQ(OutputLevelCompressor(5.0f, 0.0f, 3.0f, 0.0f), 5.0f / 3.0f);
@@ -196,14 +206,14 @@ TEST(ComputeGainTest, LimiterTest) {
 }
 
 TEST(ComputeGainTest, ExpanderTest) {
-  // No knee, above the threshold.
+  // No knee, below the threshold.
   EXPECT_FLOAT_EQ(OutputLevelExpander(-5.0f, 0.0f, 3.0f, 0.0f), -15.0f);
   EXPECT_FLOAT_EQ(OutputLevelExpander(-5.0f, 0.0f, 6.0f, 0.0f), -30.0f);
   EXPECT_FLOAT_EQ(OutputLevelExpander(-8.0f, 0.0f, 3.0f, 0.0f), -24.0f);
   EXPECT_FLOAT_EQ(OutputLevelExpander(-8.0f, 0.0f, 6.0f, 0.0f), -48.0f);
   EXPECT_FLOAT_EQ(OutputLevelExpander(-5.0f, -1.0f, 3.0f, 0.0f), -13.0f);
   EXPECT_FLOAT_EQ(OutputLevelExpander(-8.0f, -1.0f, 3.0f, 0.0f), -22.0f);
-  // No knee, above the threshold, input = output.
+  // No knee, below the threshold, input = output.
   for (float input = -40.0f; input < 20.0; input += 2.0) {
     ASSERT_FLOAT_EQ(OutputLevelExpander(input, input - 0.1, 3.0f, 0.0f),
                     input);
@@ -239,6 +249,21 @@ TEST(ComputeGainTest, ExpanderTest) {
               1e-3);
     EXPECT_FLOAT_EQ(OutputLevelExpander(half_knee, 0.0f, 3.0f, 0.0f),
                     OutputLevelExpander(half_knee, 0.0f, 3.0f, knee));
+  }
+}
+
+TEST(ComputeGainTest, NoiseGateTest) {
+  // No knee, below the threshold.
+  EXPECT_LT(OutputLevelNoiseGate(-5.0f, 0.0f, 0.0f), -140.0f);
+  EXPECT_LT(OutputLevelNoiseGate(-5.0f, 0.0f, 0.0f), -140.0f);
+  EXPECT_LT(OutputLevelNoiseGate(-8.0f, 0.0f, 0.0f), -140.0f);
+  EXPECT_LT(OutputLevelNoiseGate(-8.0f, 0.0f, 0.0f), -140.0f);
+  EXPECT_LT(OutputLevelNoiseGate(-5.0f, -1.0f, 0.0f), -140.0f);
+  EXPECT_LT(OutputLevelNoiseGate(-8.0f, -1.0f, 0.0f), -140.0f);
+  // // No knee, above the threshold, input = output.
+  for (float input = -40.0f; input < 20.0; input += 2.0) {
+    EXPECT_FLOAT_EQ(OutputLevelNoiseGate(input, input - 0.1, 0.0f), input);
+    EXPECT_LT(OutputLevelNoiseGate(input, input + 0.4, 0.0f), -140.0f);
   }
 }
 
@@ -286,6 +311,35 @@ TEST(DynamicRangeControl, NoiseGateTest) {
     drc.Init(kNumChannels, kNumSamples, 48000.0f);
     drc.ProcessBlock(input, &output);
     EXPECT_THAT(output, EigenArrayNear(0 * input, 1e-4));
+  }
+}
+
+TEST(DynamicRangeControl, SidechainTest) {
+  constexpr int kNumChannels = 2;
+  constexpr int kNumSamples = 4;
+  Eigen::ArrayXXf input(kNumChannels, kNumSamples);
+  input << 0.1, 0.1, 0.1, 0.2,
+           0.3, 0.3, 0.3, 0.0;
+  // Since we're using a noise gate, sidechain is basically a time-varying
+  // mask.
+  Eigen::ArrayXXf sidechain(kNumChannels, kNumSamples);
+  sidechain << 0.0, 1.0, 0.0, 0.0,
+               0.0, 1.0, 1.0, 0.0;
+  Eigen::ArrayXXf expected(kNumChannels, kNumSamples);
+  expected << 0.0, 0.1, 0.1, 0.0,
+              0.0, 0.3, 0.3, 0.0;
+
+  Eigen::ArrayXXf output(kNumChannels, kNumSamples);
+  {  // Signal is completely attenuated because it is below the threshold.
+    DynamicRangeControlParams params;
+    params.dynamics_type = kNoiseGate;
+    params.threshold_db = -6.0;
+    params.attack_s = 1e-8;
+    params.release_s = 1e-8;
+    DynamicRangeControl drc(params);
+    drc.Init(kNumChannels, kNumSamples, 48000.0f);
+    drc.ProcessBlockWithSidechain(input, sidechain, &output);
+    EXPECT_THAT(output, EigenArrayNear(expected, 1e-4));
   }
 }
 
@@ -444,6 +498,85 @@ TEST(DynamicRangeControl, BlockSizeTest) {
   drc.ProcessBlock(input, &output_2);
 
   EXPECT_THAT(output_2, EigenArrayNear(output_1, 1e-6));
+}
+
+TEST(DynamicRangeControl, LookaheadTest) {
+  constexpr int kOneChannel = 1;
+  constexpr int kSampleRate = 48000.0f;
+  constexpr int kBlockSize = 1000;
+  DynamicRangeControlParams params;
+
+  params.threshold_db = 100.0f;  // No compression.
+  DynamicRangeControl drc(params);
+  drc.Init(kOneChannel, kBlockSize, kSampleRate);
+
+  constexpr int kDelaySamples = 3;
+  params.lookahead_s = kDelaySamples / static_cast<float>(kSampleRate);
+  DynamicRangeControl drc_delayed(params);
+  drc_delayed.Init(kOneChannel, kBlockSize, kSampleRate);
+
+  Eigen::ArrayXXf input = Eigen::ArrayXXf::Random(kOneChannel, kBlockSize);
+
+  Eigen::ArrayXXf output(kOneChannel, kBlockSize);
+  Eigen::ArrayXXf output_delayed(kOneChannel, kBlockSize);
+
+  drc.ProcessBlock(input, &output);
+  drc_delayed.ProcessBlock(input, &output_delayed);
+
+  const int size_minus_delay = kBlockSize - kDelaySamples;
+  EXPECT_THAT(output_delayed.rightCols(size_minus_delay),
+              EigenArrayNear(output.leftCols(size_minus_delay), 1e-5));
+  EXPECT_THAT(output_delayed.leftCols(kDelaySamples),
+              EigenArrayNear(Eigen::ArrayXXf::Zero(kOneChannel, kDelaySamples),
+                             1e-5));
+}
+
+TEST(DynamicRangeControl, LookaheadImpulseTest) {
+  constexpr int kOneChannel = 1;
+  constexpr int kSampleRate = 48000.0f;
+  constexpr int kBlockSize = 100;
+  DynamicRangeControlParams params =
+      DynamicRangeControlParams::ReasonableCompressorParams();
+
+  params.attack_s = 0.05;
+  DynamicRangeControl drc(params);
+  drc.Init(kOneChannel, kBlockSize, kSampleRate);
+
+  constexpr int kDelaySamples = 3;
+  params.lookahead_s = kDelaySamples / static_cast<float>(kSampleRate);
+  DynamicRangeControl drc_delayed(params);
+  drc_delayed.Init(kOneChannel, kBlockSize, kSampleRate);
+
+  Eigen::ArrayXXf input = Eigen::ArrayXXf::Random(kOneChannel, kBlockSize);
+  // Add a huge impulse to make sure it gets more suppressed in the lookahead
+  // version.
+  const int kImpulseTime = 92;
+  const int kImpulseLength = 3;
+  for (int i = 0; i < kImpulseLength; ++i) {
+    input(0, kImpulseTime + i) = 1000.0f;
+  }
+  Eigen::ArrayXXf output(kOneChannel, kBlockSize);
+  Eigen::ArrayXXf output_delayed(kOneChannel, kBlockSize);
+
+  drc.ProcessBlock(input, &output);
+  drc_delayed.ProcessBlock(input, &output_delayed);
+
+  // Initial impulse is suppressed.
+  EXPECT_GT(output(0, kImpulseTime),
+            output_delayed(0, kImpulseTime + kDelaySamples) * 1.3);
+  // Compressor reacts before impulse happens.
+  EXPECT_GT(output(0, kImpulseTime - 1),
+            output_delayed(0, kImpulseTime + kDelaySamples - 1) * 1.3);
+  // Total impulse energy is reduced.
+  float output_impulse_energy = 0;
+  float output_delayed_impulse_energy = 0;
+  for (int i = 0; i < kImpulseLength; ++i) {
+    output_impulse_energy += output.square()(0, kImpulseTime + i);
+    output_delayed_impulse_energy +=
+        output_delayed.square()(0, kImpulseTime + kDelaySamples + i);
+  }
+  EXPECT_GT(output_impulse_energy,
+            output_delayed_impulse_energy * 1.5);
 }
 
 void BM_Compressor(benchmark::State& state) {

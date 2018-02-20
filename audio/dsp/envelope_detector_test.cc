@@ -17,6 +17,7 @@
 #include "audio/dsp/envelope_detector.h"
 
 #include <cmath>
+#include <random>
 
 #include "audio/dsp/testing_util.h"
 #include "audio/linear_filters/biquad_filter_design.h"

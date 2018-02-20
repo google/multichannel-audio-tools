@@ -33,12 +33,13 @@
 namespace linear_filters {
 namespace {
 
+using ::audio_dsp::EigenArrayNear;
 using ::Eigen::Array;
+using ::Eigen::Array2Xf;
 using ::Eigen::ArrayXf;
 using ::Eigen::ArrayXXf;
 using ::Eigen::Dynamic;
 using ::Eigen::Map;
-using ::audio_dsp::EigenArrayNear;
 using ::std::complex;
 
 // Get the name of Type as a string.
@@ -239,6 +240,74 @@ TEST(BiquadFilterTest, BiquadFilterMultichannelFloat) {
       output.col(n) = output_sample;
     }
     EXPECT_THAT(output, EigenArrayNear(expected, 1e-5));
+  }
+}
+
+TEST(BiquadFilterTest, BiquadFilterMultichannelNoncontiguousDynamic) {
+  constexpr int kNumSamples = 20;
+  constexpr int kNumChannels = 3;
+  const BiquadFilterCoefficients coeffs = {{-0.2, 1.9, 0.4}, {0.5, -0.2, 0.1}};
+  srand(0 /* seed */);
+  BiquadFilter<ArrayXf> filter;
+  filter.Init(kNumChannels, coeffs);
+
+  ArrayXXf input = ArrayXXf::Random(kNumChannels * 2, kNumSamples);
+  Eigen::Block<ArrayXXf> input_block = input.topRows(kNumChannels);
+  ArrayXXf expected = ReferenceBiquadFilter<float>(coeffs, input_block);
+
+  // Process into contiguous region.
+  {
+    ArrayXXf output;
+    filter.ProcessBlock(input_block, &output);
+    EXPECT_THAT(output, EigenArrayNear(expected, 1e-5));
+  }
+
+  // Process into a Block region. Rows that are not in the block should be
+  // untouched.
+  {
+    ArrayXXf output = ArrayXXf::Random(kNumChannels * 2, kNumSamples);
+    // This creates a Block, not a copy:
+    Eigen::Block<ArrayXXf> output_block = output.topRows(kNumChannels);
+    ArrayXXf untouched_rows = output.bottomRows(kNumChannels);  // Copy.
+    filter.Reset();
+    filter.ProcessBlock(input_block, &output_block);
+    EXPECT_THAT(output_block, EigenArrayNear(expected, 1e-5));
+    EXPECT_THAT(output.bottomRows(kNumChannels),
+                EigenArrayNear(untouched_rows, 1e-5));
+  }
+}
+
+TEST(BiquadFilterTest, BiquadFilterMultichannelNoncontiguousFixed) {
+  constexpr int kNumSamples = 20;
+  constexpr int kNumChannels = 2;
+  const BiquadFilterCoefficients coeffs = {{-0.2, 1.9, 0.4}, {0.5, -0.2, 0.1}};
+  srand(0 /* seed */);
+  BiquadFilter<ArrayXf> filter;
+  filter.Init(kNumChannels, coeffs);
+
+  ArrayXXf input = ArrayXXf::Random(kNumChannels * 2, kNumSamples);
+  Eigen::Block<ArrayXXf> input_block = input.topRows(kNumChannels);
+  ArrayXXf expected = ReferenceBiquadFilter<float>(coeffs, input_block);
+
+  // Process into contiguous region.
+  {
+    ArrayXXf output;
+    filter.ProcessBlock(input_block, &output);
+    EXPECT_THAT(output, EigenArrayNear(expected, 1e-5));
+  }
+
+  // Process into a Block region. Rows that are not in the block should be
+  // untouched.
+  {
+    ArrayXXf output = ArrayXXf::Random(kNumChannels * 2, kNumSamples);
+    Eigen::Block<ArrayXXf> output_block = output.topRows(kNumChannels);
+    ArrayXXf untouched_rows = output.bottomRows(kNumChannels);  // Copy.
+    filter.Reset();
+    filter.ProcessBlock(input_block, &output_block);
+    Eigen::IOFormat fmt(3);
+    EXPECT_THAT(output_block, EigenArrayNear(expected, 1e-5));
+    EXPECT_THAT(output.bottomRows(kNumChannels),
+                EigenArrayNear(untouched_rows, 1e-5));
   }
 }
 
@@ -498,6 +567,98 @@ TEST(BiquadFilterCascadeTest, BiquadFilterCascadeScalarFloatSetPeakGain) {
     EXPECT_THAT(output, EigenArrayNear(expected, 1e-4));
   }
 }
+
+TEST(BiquadFilterDeathTest, ProcessBlockCrashesOnInnerStrideOutput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  BiquadFilter<ArrayXXf> filter;
+  BiquadFilterCoefficients coeffs;
+  filter.Init(kNumChannels, coeffs);
+
+  ArrayXXf input(kNumChannels, kNumFrames);
+  ArrayXXf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<ArrayXXf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     kNumFrames);
+
+  ASSERT_DEATH(filter.ProcessBlock(input, &map), "inner stride");
+}
+
+TEST(BiquadFilterDeathTest, ProcessBlockCrashesOnInnerStrideInput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  BiquadFilter<ArrayXXf> filter;
+  BiquadFilterCoefficients coeffs;
+  filter.Init(kNumChannels, coeffs);
+
+  ArrayXXf output(kNumChannels, kNumFrames);
+  ArrayXXf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<ArrayXXf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     kNumFrames);
+
+  ASSERT_DEATH(filter.ProcessBlock(map, &output), "inner stride");
+}
+
+#ifndef NDEBUG
+TEST(BiquadFilterDeathTest, ProcessSampleXCrashesOnInnerStrideOutput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  BiquadFilter<ArrayXXf> filter;
+  BiquadFilterCoefficients coeffs;
+  filter.Init(kNumChannels, coeffs);
+
+  ArrayXXf output(kNumChannels, 2);
+  ArrayXXf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<ArrayXXf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     1);
+
+  ASSERT_DEATH(filter.ProcessSample(data.col(0), &map), "inner stride");
+}
+
+TEST(BiquadFilterDeathTest, ProcessSampleXCrashesOnInnerStrideInput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  BiquadFilter<ArrayXXf> filter;
+  BiquadFilterCoefficients coeffs;
+  filter.Init(kNumChannels, coeffs);
+
+  ArrayXf output(kNumChannels);
+  ArrayXXf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<ArrayXXf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     2);
+
+  ASSERT_DEATH(filter.ProcessSample(map.col(0), &output), "inner stride");
+}
+
+TEST(BiquadFilterDeathTest, ProcessSampleNCrashesOnInnerStrideOutput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  BiquadFilter<Array2Xf> filter;
+  BiquadFilterCoefficients coeffs;
+  filter.Init(kNumChannels, coeffs);
+
+  Array2Xf output(kNumChannels, 2);
+  Array2Xf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<Array2Xf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     1);
+
+  ASSERT_DEATH(filter.ProcessSample(data.col(0), &map), "inner stride");
+}
+
+TEST(BiquadFilterDeathTest, ProcessSampleNCrashesOnInnerStrideInput) {
+  const int kNumFrames = 2;
+  const int kNumChannels = 2;
+  BiquadFilter<Array2Xf> filter;
+  BiquadFilterCoefficients coeffs;
+  filter.Init(kNumChannels, coeffs);
+
+  Eigen::Array2f output(kNumChannels);
+  Array2Xf data(kNumChannels, kNumFrames * 2);
+  Eigen::Map<Array2Xf, 0, Eigen::InnerStride<2>> map(data.data(), kNumChannels,
+                                                     2);
+
+  ASSERT_DEATH(filter.ProcessSample(map.col(0), &output), "inner stride");
+}
+#endif  // NDEBUG
 
 template <typename TypeParam>
 class BiquadFilterTypedTest : public ::testing::Test {};
@@ -855,6 +1016,39 @@ BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeArrayNfBlock, 8);
 BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeArrayNfBlock, 9);
 BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeArrayNfBlock, 10);
 
+// Creates arrays with 2N rows and only operates on top N rows.
+template <int kNumChannels>
+void BM_BiquadFilterCascadeStridedMapNfBlock(benchmark::State& state) {
+  constexpr int kSamplePerBlock = 1000;
+  const BiquadFilterCoefficients coeffs = {{-0.2, 1.9, 0.4}, {0.5, -0.2, 0.1}};
+  srand(0 /* seed */);
+  using ArrayNf = Eigen::Array<float, kNumChannels, 1>;
+  using Array2NXf = Eigen::Array<float, kNumChannels * 2, Dynamic>;
+  Array2NXf input = Array2NXf::Random(kNumChannels * 2, kSamplePerBlock);
+  Array2NXf output(kNumChannels * 2, kSamplePerBlock);
+  Eigen::Block<Array2NXf, Dynamic> input_block = input.topRows(kNumChannels);
+  Eigen::Block<Array2NXf, Dynamic> output_block = output.topRows(kNumChannels);
+  BiquadFilterCascade<ArrayNf> filter;
+  std::vector<BiquadFilterCoefficients> all_coeffs(4, coeffs);
+  filter.Init(kNumChannels, BiquadFilterCascadeCoefficients(all_coeffs));
+
+  while (state.KeepRunning()) {
+    filter.ProcessBlock(input_block, &output_block);
+    benchmark::DoNotOptimize(output);
+  }
+  state.SetItemsProcessed(kSamplePerBlock * state.iterations());
+}
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 1);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 2);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 3);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 4);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 5);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 6);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 7);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 8);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 9);
+BENCHMARK_TEMPLATE(BM_BiquadFilterCascadeStridedMapNfBlock, 10);
+
 }  // namespace
 }  // namespace linear_filters
 
@@ -864,69 +1058,79 @@ Run on lpac20 (32 X 2600 MHz CPUs); 2017-05-10T17:42:33.360930491-07:00
 CPU: Intel Sandybridge with HyperThreading (16 cores)
 Benchmark                                 Time(ns)        CPU(ns)     Iterations
 --------------------------------------------------------------------------------
-BM_BiquadFilterScalarFloat                    3398           3393        2063324
-BM_BiquadFilterArrayXf/1                      4863           4856        1438957
-BM_BiquadFilterArrayXf/2                      5976           5966        1000000
-BM_BiquadFilterArrayXf/3                      8183           8170         854966
-BM_BiquadFilterArrayXf/4                      6869           6858        1000000
-BM_BiquadFilterArrayXf/5                     15886          15861         441756
-BM_BiquadFilterArrayXf/6                     18693          18663         373732
-BM_BiquadFilterArrayXf/7                     21309          21277         329144
-BM_BiquadFilterArrayXf/8                     24244          24204         288171
-BM_BiquadFilterArrayXf/9                     26989          26946         259185
-BM_BiquadFilterArrayXf/10                    29791          29745         235030
-BM_BiquadFilterMap<true>                      6604           6595        1000000
-BM_BiquadFilterMap<false>                     6734           6723        1000000
-BM_BiquadFilterArrayNf<1>                     4769           4762        1470101
-BM_BiquadFilterArrayNf<2>                     5556           5547        1000000
-BM_BiquadFilterArrayNf<3>                     7507           7496         934751
-BM_BiquadFilterArrayNf<4>                     6156           6146        1000000
-BM_BiquadFilterArrayNf<5>                    12276          12257         574693
-BM_BiquadFilterArrayNf<6>                    15666          15641         448280
-BM_BiquadFilterArrayNf<7>                    18080          18051         387383
-BM_BiquadFilterArrayNf<8>                     9556           9542         734240
-BM_BiquadFilterArrayNf<9>                    23605          23570         297713
-BM_BiquadFilterArrayNf<10>                   27302          27261         255606
-BM_BiquadFilterCascadeScalarFloatSample      11569          11550         604878
-BM_BiquadFilterCascadeScalarFloatBlock       13735          13713         515864
-BM_BiquadFilterCascadeArrayXfSample/1        18025          17998         386689
-BM_BiquadFilterCascadeArrayXfSample/2        28424          28386         243501
-BM_BiquadFilterCascadeArrayXfSample/3        39358          39305         178192
-BM_BiquadFilterCascadeArrayXfSample/4        50622          50544         100000
-BM_BiquadFilterCascadeArrayXfSample/5        61354          61261         100000
-BM_BiquadFilterCascadeArrayXfSample/6        73064          72959          96419
-BM_BiquadFilterCascadeArrayXfSample/7        85828          85702          81138
-BM_BiquadFilterCascadeArrayXfSample/8        96669          96529          72792
-BM_BiquadFilterCascadeArrayXfSample/9       107177         107014          65340
-BM_BiquadFilterCascadeArrayXfSample/10      118531         118361          59018
-BM_BiquadFilterCascadeArrayXfBlock/1         20770          20740         339993
-BM_BiquadFilterCascadeArrayXfBlock/2         25357          25318         275245
-BM_BiquadFilterCascadeArrayXfBlock/3         34476          34421         204151
-BM_BiquadFilterCascadeArrayXfBlock/4         27732          27690         252813
-BM_BiquadFilterCascadeArrayXfBlock/5         62601          62504         100000
-BM_BiquadFilterCascadeArrayXfBlock/6         74159          74051          94613
-BM_BiquadFilterCascadeArrayXfBlock/7         85524          85398          82287
-BM_BiquadFilterCascadeArrayXfBlock/8         97076          96931          72126
-BM_BiquadFilterCascadeArrayXfBlock/9        108911         108740          63970
-BM_BiquadFilterCascadeArrayXfBlock/10       120293         120103          57146
-BM_BiquadFilterCascadeArrayNfSample<1>       11564          11546         605937
-BM_BiquadFilterCascadeArrayNfSample<2>       27433          27388         256140
-BM_BiquadFilterCascadeArrayNfSample<3>       38077          38020         183713
-BM_BiquadFilterCascadeArrayNfSample<4>       25708          25669         272567
-BM_BiquadFilterCascadeArrayNfSample<5>       58665          58572         100000
-BM_BiquadFilterCascadeArrayNfSample<6>       71413          71303          97771
-BM_BiquadFilterCascadeArrayNfSample<7>       76718          76603          91528
-BM_BiquadFilterCascadeArrayNfSample<8>       45814          45748         153068
-BM_BiquadFilterCascadeArrayNfSample<9>       90321          90190          77043
-BM_BiquadFilterCascadeArrayNfSample<10>     108846         108679          64552
-BM_BiquadFilterCascadeArrayNfBlock<1>        19126          19096         366067
-BM_BiquadFilterCascadeArrayNfBlock<2>        23789          23755         313954
-BM_BiquadFilterCascadeArrayNfBlock<3>        28988          28941         225793
-BM_BiquadFilterCascadeArrayNfBlock<4>        28245          28201         248161
-BM_BiquadFilterCascadeArrayNfBlock<5>        54014          53928         100000
-BM_BiquadFilterCascadeArrayNfBlock<6>        62439          62347         100000
-BM_BiquadFilterCascadeArrayNfBlock<7>        72409          72298          97229
-BM_BiquadFilterCascadeArrayNfBlock<8>        38167          38106         183813
-BM_BiquadFilterCascadeArrayNfBlock<9>        94294          94145          74420
-BM_BiquadFilterCascadeArrayNfBlock<10>      108906         108731          64491
+BM_BiquadFilterScalarFloat                    4300           4291        4894470
+BM_BiquadFilterArrayXf/1                      6101           6090        3448079
+BM_BiquadFilterArrayXf/2                      8307           8290        2533247
+BM_BiquadFilterArrayXf/3                      8782           8766        2395737
+BM_BiquadFilterArrayXf/4                      6130           6117        3432555
+BM_BiquadFilterArrayXf/5                     17903          17863        1000000
+BM_BiquadFilterArrayXf/6                     21259          21220         989886
+BM_BiquadFilterArrayXf/7                     24648          24595         853788
+BM_BiquadFilterArrayXf/8                     27915          27855         754360
+BM_BiquadFilterArrayXf/9                     31239          31183         673414
+BM_BiquadFilterArrayXf/10                    34645          34574         607354
+BM_BiquadFilterMapAligned                     5991           5978        3513477
+BM_BiquadFilterMapUnaligned                   6026           6014        3491515
+BM_BiquadFilterArrayNf<1>                     4300           4292        4892586
+BM_BiquadFilterArrayNf<2>                     4659           4650        4515730
+BM_BiquadFilterArrayNf<3>                     6114           6101        3442030
+BM_BiquadFilterArrayNf<4>                     4306           4297        4886303
+BM_BiquadFilterArrayNf<5>                     6379           6368        3297711
+BM_BiquadFilterArrayNf<6>                    17816          17780        1000000
+BM_BiquadFilterArrayNf<7>                    11377          11353        1850934
+BM_BiquadFilterArrayNf<8>                     5129           5119        4101566
+BM_BiquadFilterArrayNf<9>                    18883          18845        1000000
+BM_BiquadFilterArrayNf<10>                   20206          20164        1000000
+BM_BiquadFilterCascadeScalarFloatSample      13297          13269        1582805
+BM_BiquadFilterCascadeScalarFloatBlock       17229          17194        1000000
+BM_BiquadFilterCascadeArrayXfSample/1        19552          19518        1000000
+BM_BiquadFilterCascadeArrayXfSample/2        32420          32353         649208
+BM_BiquadFilterCascadeArrayXfSample/3        46451          46352         453042
+BM_BiquadFilterCascadeArrayXfSample/4        59948          59848         350888
+BM_BiquadFilterCascadeArrayXfSample/5        72425          72275         290558
+BM_BiquadFilterCascadeArrayXfSample/6        86259          86101         243895
+BM_BiquadFilterCascadeArrayXfSample/7        99562          99356         211381
+BM_BiquadFilterCascadeArrayXfSample/8       113021         112796         186173
+BM_BiquadFilterCascadeArrayXfSample/9       125760         125495         167338
+BM_BiquadFilterCascadeArrayXfSample/10      139522         139250         150828
+BM_BiquadFilterCascadeArrayXfBlock/1         24383          24337         863153
+BM_BiquadFilterCascadeArrayXfBlock/2         33212          33146         633610
+BM_BiquadFilterCascadeArrayXfBlock/3         35257          35191         596653
+BM_BiquadFilterCascadeArrayXfBlock/4         24442          24392         861089
+BM_BiquadFilterCascadeArrayXfBlock/5         71853          71698         288565
+BM_BiquadFilterCascadeArrayXfBlock/6         85526          85371         247230
+BM_BiquadFilterCascadeArrayXfBlock/7         98278          98067         214154
+BM_BiquadFilterCascadeArrayXfBlock/8        111850         111648         188232
+BM_BiquadFilterCascadeArrayXfBlock/9        124992         124720         168380
+BM_BiquadFilterCascadeArrayXfBlock/10       138266         138020         152173
+BM_BiquadFilterCascadeArrayNfSample<1>       13296          13269        1582706
+BM_BiquadFilterCascadeArrayNfSample<2>       29944          29889         701662
+BM_BiquadFilterCascadeArrayNfSample<3>       32644          32578         644417
+BM_BiquadFilterCascadeArrayNfSample<4>       34694          34623         606594
+BM_BiquadFilterCascadeArrayNfSample<5>       31255          31202         673191
+BM_BiquadFilterCascadeArrayNfSample<6>       53746          53633         391520
+BM_BiquadFilterCascadeArrayNfSample<7>       60494          60367         347880
+BM_BiquadFilterCascadeArrayNfSample<8>       48312          48228         435447
+BM_BiquadFilterCascadeArrayNfSample<9>       69355          69208         303440
+BM_BiquadFilterCascadeArrayNfSample<10>      70541          70414         298238
+BM_BiquadFilterCascadeArrayNfBlock<1>        17542          17506        1000000
+BM_BiquadFilterCascadeArrayNfBlock<2>        18506          18468        1000000
+BM_BiquadFilterCascadeArrayNfBlock<3>        24436          24387         861167
+BM_BiquadFilterCascadeArrayNfBlock<4>        17210          17178        1000000
+BM_BiquadFilterCascadeArrayNfBlock<5>        20931          20885        1000000
+BM_BiquadFilterCascadeArrayNfBlock<6>        36841          36759         571262
+BM_BiquadFilterCascadeArrayNfBlock<7>        35992          35923         584659
+BM_BiquadFilterCascadeArrayNfBlock<8>        19643          19601        1000000
+BM_BiquadFilterCascadeArrayNfBlock<9>        44100          44008         477236
+BM_BiquadFilterCascadeArrayNfBlock<10>       71315          71164         295088
+BM_BiquadFilterCascadeStridedMapNfBlock<1>   17343          17308        1000000
+BM_BiquadFilterCascadeStridedMapNfBlock<2>   19022          18985        1000000
+BM_BiquadFilterCascadeStridedMapNfBlock<3>   25781          25732         816553
+BM_BiquadFilterCascadeStridedMapNfBlock<4>   17220          17185        1000000
+BM_BiquadFilterCascadeStridedMapNfBlock<5>   20277          20235        1000000
+BM_BiquadFilterCascadeStridedMapNfBlock<6>   25312          25268         831109
+BM_BiquadFilterCascadeStridedMapNfBlock<7>   32507          32438         647339
+BM_BiquadFilterCascadeStridedMapNfBlock<8>   22955          22907         916580
+BM_BiquadFilterCascadeStridedMapNfBlock<9>   33922          33859         620020
+BM_BiquadFilterCascadeStridedMapNfBlock<10   71583          71424         294025
 */

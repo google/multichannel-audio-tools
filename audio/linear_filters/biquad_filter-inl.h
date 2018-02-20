@@ -78,6 +78,7 @@ void BiquadFilter<_SampleType>::ProcessSample(const InputType& input,
   // normalized such that a0 = 1, which is done in Init().] The state_ array
   // is a 2-sample sliding buffer to record the previous states s[n - 1] and
   // s[n - 2].
+
   using InputScalarType = typename Traits::template
       GetScalarType<InputType>::Type;
   using OutputScalarType = typename Traits::template
@@ -100,6 +101,11 @@ void BiquadFilter<_SampleType>::ProcessSample(const InputType& input,
     // channels with Eigen.
     DCHECK_EQ(Traits::AsEigenArray(input).rows(), num_channels_);
     Traits::AsMutableEigenArray(output)->resize(num_channels_);
+    DCHECK_EQ(Traits::AsEigenArray(input).innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
+    DCHECK_EQ(Traits::AsMutableEigenArray(output)->innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
+
     const InputScalarType* input_data = Traits::GetData(input);
     OutputScalarType* output_data = Traits::GetMutableData(output);
     for (int channel = 0; channel < num_channels_; ++channel) {
@@ -137,6 +143,11 @@ void BiquadFilter<_SampleType>::ProcessSample(const InputType& input,
     DCHECK_EQ(Traits::AsEigenArray(input).rows(), kFixedNumChannels);
     // Map state_ with fixed rows. Mapping is Aligned only if state_ is
     // "fixed-sized vectorizable," meaning its size is a multiple of 16 bytes.
+    DCHECK_EQ(Traits::AsEigenArray(input).innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
+    DCHECK_EQ(Traits::AsMutableEigenArray(output)->innerStride(), 1)
+        << "Cannot operate on map with inner stride.";
+
     Eigen::Map<Eigen::Matrix<AccumType, kFixedNumChannels, 2>,
         ((sizeof(AccumType) * kFixedNumChannels * 2) % 16 == 0)
         ? Eigen::Aligned : Eigen::Unaligned> state_map(
