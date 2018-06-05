@@ -158,8 +158,10 @@ struct DynamicRangeControlParams {
     params.threshold_db = -37.0f;
     params.ratio = 4.6f;
     params.knee_width_db = 4.0f;
+    // See documentation on these time constants below.
     params.attack_s = 0.001f;
     params.release_s = 0.08f;
+    params.lookahead_s = 0;
     return params;
   }
 
@@ -172,8 +174,10 @@ struct DynamicRangeControlParams {
     params.output_gain_db = 0.0f;
     params.threshold_db = -3.0f;
     params.knee_width_db = 1.0f;
+    // See documentation on these time constants below.
     params.attack_s = 0.0004f;
     params.release_s = 0.004f;
+    params.lookahead_s = 0;
     return params;
   }
 
@@ -213,6 +217,15 @@ struct DynamicRangeControlParams {
 
   // Exponential time constants associated with the gain estimator. Depending
   // on the application, these may range from 1ms to over 1s.
+  //
+  // If you are trying to compare this DRC to another commercial DRC, you may
+  // find that the same time constants produce different results. We use the
+  // definition of time constant that is typical in signal processing:
+  // a filter's step response reaches (1 - 1/e) of its final value after one
+  // time constant. Some commercial DRCs will define their time constants such
+  // that the filter is within some small tolerance of its final value after
+  // one time constant (meaning that to get similar results, time constants for
+  // this DRC should be set about a factor of 4 smaller).
   float attack_s;
   float release_s;
 

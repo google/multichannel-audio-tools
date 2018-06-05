@@ -144,7 +144,7 @@ TEST(NumberUtilTest, IsPowerOfTwoOrZero) {
 
 TEST(NumberUtilTest, Log2) {
   for (int value = 1; value < 300; ++value) {
-    SCOPED_TRACE(util::format::StringF("value:%d", value));
+    SCOPED_TRACE(absl::StrFormat("value:%d", value));
     EXPECT_EQ(std::floor(std::log2(value)), Log2Floor(value));
     EXPECT_EQ(std::ceil(std::log2(value)), Log2Ceiling(value));
   }
@@ -152,7 +152,7 @@ TEST(NumberUtilTest, Log2) {
 
 TEST(NumberUtilTest, NextPowerOfTwo) {
   for (int value = 1; value < 300; ++value) {
-    SCOPED_TRACE(util::format::StringF("value:%d", value));
+    SCOPED_TRACE(absl::StrFormat("value:%d", value));
     int result = NextPowerOfTwo(value);
     EXPECT_TRUE(IsPowerOfTwoOrZero(result));
     EXPECT_GE(result, value);
@@ -285,7 +285,7 @@ TEST(NumberUtilTest, CombinationsIterator) {
 
   for (int n = 1; n <= 7; ++n) {
     for (int k = 1; k <= n; ++k) {
-      SCOPED_TRACE(util::format::StringF("n:%d, k:%d", n, k));
+      SCOPED_TRACE(absl::StrFormat("n:%d, k:%d", n, k));
       vector<vector<int>> combinations;
       for (CombinationsIterator it(n, k); !it.Done(); it.Next()) {
         const vector<int>& combination = it.GetCurrentCombination();
@@ -453,11 +453,11 @@ TEST(NumberUtilTest, RationalApproximationIsOptimal) {
   constexpr int kNumTrials = 20;
   std::mt19937 rng(0 /* seed */);
   for (int max_denominator : {5, 10, 20}) {
-    SCOPED_TRACE(util::format::StringF("max_denominator: %d", max_denominator));
+    SCOPED_TRACE(absl::StrFormat("max_denominator: %d", max_denominator));
     for (int trial = 0; trial < kNumTrials; ++trial) {
       const double value =
           std::uniform_real_distribution<double>(-1.0, 1.0)(rng);
-      SCOPED_TRACE(util::format::StringF("value: %g", value));
+      SCOPED_TRACE(absl::StrFormat("value: %g", value));
       Fraction rational = RationalApproximation(value, max_denominator);
       ASSERT_LE(rational.second, max_denominator);
       ASSERT_EQ(1, GreatestCommonDivisor(

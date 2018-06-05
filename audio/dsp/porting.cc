@@ -79,9 +79,10 @@ bool Demangle(const char *mangled, char *out, int out_size) {
 string Demangle(const char *mangled) {
   return {};
 }
+}  // namespace util
 
-namespace format {
-string StringF(const char *fmt, ...) {
+namespace absl {
+string StrFormat(const char *fmt, ...) {
   string s;
   va_list argptr;
   va_start(argptr, fmt);
@@ -92,6 +93,4 @@ string StringF(const char *fmt, ...) {
   s = temp;
   return s;
 }
-}  // namespace format
-}  // namespace util
-
+}  // namespace absl

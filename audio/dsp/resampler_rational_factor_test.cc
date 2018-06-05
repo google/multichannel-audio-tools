@@ -46,13 +46,13 @@ TEST(ResamplerRationalFactorTest, ResamplingKernel) {
   constexpr double kKaiserBeta = 6.0;
   for (double input_sample_rate : {12000, 16000, 32000, 44100, 48000}) {
     for (double output_sample_rate : {12000, 16000, 32000, 44100, 48000}) {
-      SCOPED_TRACE(util::format::StringF("Resampling from %gHz to %gHz",
-                                input_sample_rate, output_sample_rate));
+      SCOPED_TRACE(absl::StrFormat("Resampling from %gHz to %gHz",
+                                   input_sample_rate, output_sample_rate));
       for (double radius : {5, 17}) {
         if (input_sample_rate > output_sample_rate) {
           radius *= input_sample_rate / output_sample_rate;
         }
-        SCOPED_TRACE(util::format::StringF("radius: %g input samples", radius));
+        SCOPED_TRACE(absl::StrFormat("radius: %g input samples", radius));
         const double cutoff =
             0.45 * std::min(input_sample_rate, output_sample_rate);
         DefaultResamplingKernel kernel(input_sample_rate, output_sample_rate,
@@ -180,13 +180,13 @@ TYPED_TEST(ResamplerRationalFactorTypedTest, CompareWithReferenceResampler) {
       if (input_sample_rate == output_sample_rate) {
         continue;
       }
-      SCOPED_TRACE(util::format::StringF("Resampling from %gHz to %gHz",
-                                input_sample_rate, output_sample_rate));
+      SCOPED_TRACE(absl::StrFormat("Resampling from %gHz to %gHz",
+                                   input_sample_rate, output_sample_rate));
       for (double radius : {4, 5, 17}) {
         if (input_sample_rate > output_sample_rate) {
           radius *= input_sample_rate / output_sample_rate;
         }
-        SCOPED_TRACE(util::format::StringF("radius: %g input samples", radius));
+        SCOPED_TRACE(absl::StrFormat("radius: %g input samples", radius));
         const double cutoff =
             0.45 * std::min(input_sample_rate, output_sample_rate);
         DefaultResamplingKernel kernel(input_sample_rate, output_sample_rate,
@@ -260,8 +260,8 @@ TYPED_TEST(ResamplerRationalFactorTypedTest, ResampleSineWave) {
   constexpr double kFrequency = 1100.7;
   for (double input_sample_rate : {12000, 16000, 32000, 44100, 48000}) {
     for (double output_sample_rate : {12000, 16000, 32000, 44100, 48000}) {
-      SCOPED_TRACE(util::format::StringF("Resampling from %gHz to %gHz",
-                                input_sample_rate, output_sample_rate));
+      SCOPED_TRACE(absl::StrFormat("Resampling from %gHz to %gHz",
+                                   input_sample_rate, output_sample_rate));
       DefaultResamplingKernel kernel(input_sample_rate, output_sample_rate);
       int factor_numerator = input_sample_rate;
       int factor_denominator = output_sample_rate;
@@ -356,22 +356,43 @@ TYPED_TEST(ResamplerRationalFactorTypedTest, WorksWithEigenTypes) {
   // Reset and process same samples as Eigen matrix.
   resampler.Reset();
   ASSERT_TRUE(resampler.Valid());
-  Eigen::Matrix<ValueType, Eigen::Dynamic, 1> eigen_input(kNumSamples);
-  for (int i = 0; i < kNumSamples; ++i) {
-    eigen_input[i] = input[i];
-  }
-  Eigen::Matrix<ValueType, Eigen::Dynamic, 1> eigen_samples;
-  resampler.ProcessSamplesEigen(eigen_input, &eigen_samples);
-  Eigen::Matrix<ValueType, Eigen::Dynamic, 1> eigen_flushed;
-  resampler.FlushEigen(&eigen_flushed);
+  {  // Try for matrix types.
+    Eigen::Matrix<ValueType, Eigen::Dynamic, 1> eigen_input(kNumSamples);
+    for (int i = 0; i < kNumSamples; ++i) {
+      eigen_input[i] = input[i];
+    }
+    Eigen::Matrix<ValueType, Eigen::Dynamic, 1> eigen_samples;
+    resampler.ProcessSamplesEigen(eigen_input, &eigen_samples);
+    Eigen::Matrix<ValueType, Eigen::Dynamic, 1> eigen_flushed;
+    resampler.FlushEigen(&eigen_flushed);
 
-  for (int i = 0; i < vector_samples.size(); ++i) {
-    // EXPECT_NEAR doesn't support complex types.
-    EXPECT_LT(std::abs(eigen_samples[i] - vector_samples[i]), 1e-6);
+    for (int i = 0; i < vector_samples.size(); ++i) {
+      // EXPECT_NEAR doesn't support complex types.
+      EXPECT_LT(std::abs(eigen_samples[i] - vector_samples[i]), 1e-6);
+    }
+    // Make sure flushed samples agree.
+    for (int i = 0; i < vector_flushed.size(); ++i) {
+      EXPECT_LT(std::abs(eigen_flushed[i] - vector_flushed[i]), 1e-6);
+    }
   }
-  // Make sure flushed samples agree.
-  for (int i = 0; i < vector_flushed.size(); ++i) {
-    EXPECT_LT(std::abs(eigen_flushed[i] - vector_flushed[i]), 1e-6);
+  {  // Try for array types.
+    Eigen::Array<ValueType, Eigen::Dynamic, 1> eigen_input(kNumSamples);
+    for (int i = 0; i < kNumSamples; ++i) {
+      eigen_input[i] = input[i];
+    }
+    Eigen::Array<ValueType, Eigen::Dynamic, 1> eigen_samples;
+    resampler.ProcessSamplesEigen(eigen_input, &eigen_samples);
+    Eigen::Array<ValueType, Eigen::Dynamic, 1> eigen_flushed;
+    resampler.FlushEigen(&eigen_flushed);
+
+    for (int i = 0; i < vector_samples.size(); ++i) {
+      // EXPECT_NEAR doesn't support complex types.
+      EXPECT_LT(std::abs(eigen_samples[i] - vector_samples[i]), 1e-6);
+    }
+    // Make sure flushed samples agree.
+    for (int i = 0; i < vector_flushed.size(); ++i) {
+      EXPECT_LT(std::abs(eigen_flushed[i] - vector_flushed[i]), 1e-6);
+    }
   }
 }
 
@@ -388,9 +409,8 @@ TYPED_TEST(ResamplerRationalFactorTypedTest,
 
   for (double input_sample_rate : {12000, 16000, 32000, 44100, 48000}) {
     for (double output_sample_rate : {12000, 16000, 32000, 44100, 48000}) {
-      SCOPED_TRACE(util::format::StringF("Resampling from %gHz to %gHz.",
-                                         input_sample_rate,
-                                         output_sample_rate));
+      SCOPED_TRACE(absl::StrFormat("Resampling from %gHz to %gHz.",
+                                   input_sample_rate, output_sample_rate));
 
       DefaultResamplingKernel kernel(input_sample_rate, output_sample_rate);
       RationalFactorResampler<ValueType> resampler(kernel, input_sample_rate,
@@ -452,6 +472,31 @@ TYPED_TEST(ResamplerRationalFactorTypedTest, TestInvalidResampler) {
   DefaultResamplingKernel kernel(44100, 44100);
   RationalFactorResampler<TypeParam> resampler(kernel, 0, 0);
   ASSERT_FALSE(resampler.Valid());
+}
+
+TYPED_TEST(ResamplerRationalFactorTypedTest,
+           TestComputeOutputSizeFromCurrentStateDoesntOverflow) {
+  // On real data, ComputeOutputSizeFromCurrentState overflowed int32.
+  // It internally computes input_size * factor_denominator.  The denominator
+  // in this case is 160 (numerator 441).  A single music track input was
+  // about 14M samples (5 min at 44 kHz), yielding a product just larger than
+  // 2^31.  This caused a call to vector.resize() with a negative argument, and
+  // thus a core dump.
+  typedef TypeParam ValueType;
+
+  double input_sample_rate = 44100;
+  double output_sample_rate = 16000;
+  DefaultResamplingKernel kernel(input_sample_rate, output_sample_rate);
+  RationalFactorResampler<ValueType> resampler(kernel, input_sample_rate,
+                                               output_sample_rate);
+  ASSERT_TRUE(resampler.Valid());
+
+  std::vector<ValueType> input, output;
+
+  input.resize(14038500);  // This was the value that triggered the error.
+
+  // If it doesn't dump core, we're good.
+  resampler.ProcessSamples(input, &output);
 }
 
 }  // namespace

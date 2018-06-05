@@ -20,13 +20,14 @@
 
 #include "glog/logging.h"
 #include "absl/strings/str_cat.h"
+
 #include "absl/strings/str_join.h"
 #include "absl/strings/substitute.h"
 
 namespace linear_filters {
 
+using ::absl::StrFormat;
 using ::std::complex;
-using ::util::format::StringF;
 
 namespace internal {
 
@@ -79,17 +80,19 @@ bool BiquadFilterTestTools::IsMonotonicOnFrequencyRange(
     // do not fail due to numerical imprecision.
     if (expect_increasing) {
       if (next_response + 1e-5 < current_response) {
-        LOG(INFO) <<
-            StringF("Failed check for monotonic increase at frequency %f. "
-                    "(%f < %f)", current_freq, next_response, current_response);
+        LOG(INFO) << StrFormat(
+            "Failed check for monotonic increase at frequency %f. "
+            "(%f < %f)",
+            current_freq, next_response, current_response);
         return false;
       }
     } else {
       if (next_response - 1e-5 > current_response) {
-        LOG(INFO) <<
-            StringF("Failed check for monotonic decrease at frequency %f.  "
-                    "(%f > %f)", current_freq, next_response, current_response);
-       return false;
+        LOG(INFO) << StrFormat(
+            "Failed check for monotonic decrease at frequency %f.  "
+            "(%f > %f)",
+            current_freq, next_response, current_response);
+        return false;
       }
     }
     current_response = next_response;

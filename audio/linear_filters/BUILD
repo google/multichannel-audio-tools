@@ -219,6 +219,29 @@ cc_library(
 )
 
 cc_library(
+    name = "fir_filter",
+    srcs = ["fir_filter.cc"],
+    hdrs = ["fir_filter.h"],
+    deps = [
+        "//third_party/eigen3",
+        "@com_github_glog_glog//:glog",
+    ],
+)
+
+cc_test(
+    name = "fir_filter_test",
+    size = "small",
+    srcs = ["fir_filter_test.cc"],
+    deps = [
+        ":fir_filter",
+        "//audio/dsp:testing_util",
+        "//third_party/eigen3",
+        "@com_github_glog_glog//:glog",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "ladder_filter",
     srcs = ["ladder_filter-inl.h"],
     hdrs = ["ladder_filter.h"],

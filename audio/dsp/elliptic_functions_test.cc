@@ -79,9 +79,9 @@ TEST(EllipticFunctionsTest, EllipticF) {
     const complex<double> phi = test_value.phi;
     const double m = test_value.m;
     const complex<double> expected = test_value.expected;
-    SCOPED_TRACE(util::format::StringF(
-        "phi = %g + %gi, m = %g, expected = %g + %gi",
-        phi.real(), phi.imag(), m, expected.real(), expected.imag()));
+    SCOPED_TRACE(absl::StrFormat("phi = %g + %gi, m = %g, expected = %g + %gi",
+                                 phi.real(), phi.imag(), m, expected.real(),
+                                 expected.imag()));
 
     complex<double> u = EllipticF(phi, m);
     EXPECT_THAT(u, ComplexDoubleNear(expected, 1e-12));
@@ -99,9 +99,9 @@ TEST(EllipticFunctionsTest, JacobiAmplitude) {
     const double m = m_dist(rng);
     const complex<double> phi(phi_real_dist(rng), phi_imag_dist(rng));
     const complex<double> u = EllipticF(phi, m);
-    SCOPED_TRACE(util::format::StringF(
-        "phi = %g + %gi, m = %g, u = %g + %gi",
-        phi.real(), phi.imag(), m, u.real(), u.imag()));
+    SCOPED_TRACE(absl::StrFormat("phi = %g + %gi, m = %g, u = %g + %gi",
+                                 phi.real(), phi.imag(), m, u.real(),
+                                 u.imag()));
     const complex<double> phi_recovered = JacobiAmplitude(u, m);
     ASSERT_THAT(phi_recovered, ComplexDoubleNear(phi, 1e-12));
   }

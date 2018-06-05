@@ -67,11 +67,11 @@ namespace util {
 // Note that these don't do any demangling in the open source code.
 bool Demangle(const char *mangled, char *out, int out_size);
 string Demangle(const char* mangled);
-
-namespace format {
-string StringF(const char *fmt, ...);
-}  // namespace format
-
 }  // namespace util
+
+namespace absl {
+string StrFormat(const char *fmt, ...);
+}  // namespace absl
+
 
 #endif  // AUDIO_DSP_OPEN_SOURCE_PORTING_H_

@@ -255,7 +255,8 @@ class RationalFactorResampler: public Resampler<ValueType> {
     ProcessSamplesEigen(input_map, &output_map);
   }
 
-  // These templates allow Eigen types to be processed by the resampler.
+  // These templates allow one dimensional Eigen types to be processed by the
+  // resampler.
   template <typename EigenType1, typename EigenType2>
   void ProcessSamplesEigen(const EigenType1& input, EigenType2* output) {
     DCHECK(output != nullptr);
@@ -297,7 +298,7 @@ class RationalFactorResampler: public Resampler<ValueType> {
       DCHECK_LT(output_samples, output->size());
       (*output)[output_samples] =
           filter.head(num_state).dot(delayed_input_map.tail(num_state)) +
-          filter.tail(num_input).dot(input.head(num_input));
+          filter.tail(num_input).dot(input.matrix().head(num_input));
       ++output_samples;
       i += factor_floor_;
       phase_ += phase_step_;
@@ -325,7 +326,7 @@ class RationalFactorResampler: public Resampler<ValueType> {
     while (i < i_end) {
       DCHECK_LT(output_samples, output->size());
       (*output)[output_samples] =
-          filters_[phase_].dot(input.segment(i, num_taps_));
+          filters_[phase_].dot(input.matrix().segment(i, num_taps_));
       ++output_samples;
       i += factor_floor_;
       phase_ += phase_step_;
@@ -422,12 +423,15 @@ class RationalFactorResampler: public Resampler<ValueType> {
   // which is
   //   o = ceil((fd * (a - num_taps + 1) - p) / fn).
   int ComputeOutputSizeFromCurrentState(int input_size) {
-    const int min_consumed_input =
-        static_cast<int>(delayed_input_.size()) + input_size - num_taps_ + 1;
-    if (min_consumed_input <= 0) { return 0; }
+    const int64 min_consumed_input =
+        delayed_input_.size() + input_size - num_taps_ + 1;
+    if (min_consumed_input <= 0) {
+      return 0;
+    }
     // (x + y - 1) / y = ceil(x / float(y)),  where y is an integer.
-    return (min_consumed_input * factor_denominator_ -
-            phase_ + factor_numerator_ - 1) / factor_numerator_;
+    return (min_consumed_input * factor_denominator_ - phase_ +
+            factor_numerator_ - 1) /
+           factor_numerator_;
   }
 
   bool valid_ = false;

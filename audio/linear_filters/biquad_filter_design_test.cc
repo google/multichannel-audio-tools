@@ -31,12 +31,12 @@
 
 namespace linear_filters {
 
+using ::absl::StrFormat;
 using ::audio_dsp::AmplitudeRatioToDecibels;
 using ::std::complex;
 using ::std::vector;
 using ::testing::DoubleNear;
 using ::testing::Le;
-using ::util::format::StringF;
 
 namespace {
 
@@ -55,8 +55,8 @@ TEST(BiquadFilterDesignTest, LowpassCoefficientsTest) {
           LowpassBiquadFilterCoefficients(kSampleRateHz,
                                           corner_frequency_hz,
                                           quality_factor);
-      SCOPED_TRACE(StringF("Lowpass (Q = %f) with corner = %f.",
-                           quality_factor, corner_frequency_hz));
+      SCOPED_TRACE(StrFormat("Lowpass (Q = %f) with corner = %f.",
+                             quality_factor, corner_frequency_hz));
       ASSERT_THAT(coeffs, MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                               0.0f, kSampleRateHz));
       ASSERT_THAT(coeffs,
@@ -81,8 +81,8 @@ TEST(BiquadFilterDesignTest, HighpassCoefficientsTest) {
            HighpassBiquadFilterCoefficients(kSampleRateHz,
                                             corner_frequency_hz,
                                             quality_factor);
-      SCOPED_TRACE(StringF("Highpass (Q = %f) with corner = %f.",
-                           quality_factor, corner_frequency_hz));
+      SCOPED_TRACE(StrFormat("Highpass (Q = %f) with corner = %f.",
+                             quality_factor, corner_frequency_hz));
       ASSERT_THAT(coeffs,
                   MagnitudeResponseIs(DoubleNear(0.0, kTolerance),
                                       0.0f, kSampleRateHz));
@@ -108,10 +108,8 @@ TEST(BiquadFilterDesignTest, BandpassCoefficientsTest) {
            BandpassBiquadFilterCoefficients(kSampleRateHz,
                                             center_frequency_hz,
                                             quality_factor);
-      SCOPED_TRACE(
-          StringF("Bandpass (Q = %f) with center frequency = %f.",
-                  quality_factor,
-                  center_frequency_hz));
+      SCOPED_TRACE(StrFormat("Bandpass (Q = %f) with center frequency = %f.",
+                             quality_factor, center_frequency_hz));
       ASSERT_THAT(coeffs,
                   MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                       center_frequency_hz, kSampleRateHz));
@@ -134,10 +132,8 @@ TEST(BiquadFilterDesignTest, BandstopCoefficientsTest) {
           BandstopBiquadFilterCoefficients(kSampleRateHz,
                                            center_frequency_hz,
                                            quality_factor);
-      SCOPED_TRACE(
-          StringF("Bandstop (Q = %f) with center frequency = %f.",
-                  quality_factor,
-                  center_frequency_hz));
+      SCOPED_TRACE(StrFormat("Bandstop (Q = %f) with center frequency = %f.",
+                             quality_factor, center_frequency_hz));
       ASSERT_THAT(coeffs,
                   MagnitudeResponseIs(DoubleNear(0.0, kTolerance),
                                       center_frequency_hz, kSampleRateHz));
@@ -171,10 +167,9 @@ TEST(BiquadFilterDesignTest, RangedBandpassCoefficientsTest) {
                                                  lower_band_edge_hz,
                                                  upper_band_edge_hz);
       SCOPED_TRACE(
-          StringF("Ranged bandpass with approximate center = %f and "
-                  "half bandwidth %f",
-                  approximate_center_hz,
-                  approximate_half_bandwidth));
+          StrFormat("Ranged bandpass with approximate center = %f and "
+                    "half bandwidth %f",
+                    approximate_center_hz, approximate_half_bandwidth));
 
       // The actual center of the filter is located near the geometric mean of
       // the cutoff specifications.
@@ -218,10 +213,9 @@ TEST(BiquadFilterDesignTest, RangedBandstopCoefficientsTest) {
                                                  lower_band_edge_hz,
                                                  upper_band_edge_hz);
       SCOPED_TRACE(
-          StringF("Ranged bandstop with approximate center = %f and "
-                  "half bandwidth %f",
-                  approximate_center_hz,
-                  approximate_half_bandwidth));
+          StrFormat("Ranged bandstop with approximate center = %f and "
+                    "half bandwidth %f",
+                    approximate_center_hz, approximate_half_bandwidth));
 
       // The actual center of the filter is located near the geometric mean of
       // the cutoff specifications.
@@ -259,9 +253,9 @@ TEST(BiquadFilterDesignTest, LowShelfCoefficientsTest) {
                                              corner_frequency_hz,
                                              quality_factor,
                                              gain);
-        SCOPED_TRACE(
-            StringF("LowShelf (Q = %f) with center frequency = %f and gain %f.",
-                    quality_factor, corner_frequency_hz, gain));
+        SCOPED_TRACE(StrFormat(
+            "LowShelf (Q = %f) with center frequency = %f and gain %f.",
+            quality_factor, corner_frequency_hz, gain));
         ASSERT_THAT(coeffs,
                     MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                         kSampleRateHz / 2, kSampleRateHz));
@@ -298,9 +292,9 @@ TEST(BiquadFilterDesignTest, HighShelfCoefficientsTest) {
                                               center_frequency_hz,
                                               quality_factor,
                                               gain);
-        SCOPED_TRACE(
-            StringF("LowShelf (Q = %f) with center frequency = %f and gain %f.",
-                    quality_factor, center_frequency_hz, gain));
+        SCOPED_TRACE(StrFormat(
+            "LowShelf (Q = %f) with center frequency = %f and gain %f.",
+            quality_factor, center_frequency_hz, gain));
         ASSERT_THAT(coeffs,
                     MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                         0, kSampleRateHz));
@@ -338,8 +332,9 @@ TEST(BiquadFilterDesignTest, ParametricPeakCoefficientsTest) {
                                                    quality_factor,
                                                    gain);
         SCOPED_TRACE(
-            StringF("Parametric filter (Q = %f) with center frequency = %f "
-                    "and gain %f.", quality_factor, center_frequency_hz, gain));
+            StrFormat("Parametric filter (Q = %f) with center frequency = %f "
+                      "and gain %f.",
+                      quality_factor, center_frequency_hz, gain));
         ASSERT_THAT(coeffs,
                     MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                         0, kSampleRateHz));
@@ -447,9 +442,9 @@ TEST(BiquadFilterDesignTest,
                                                             quality_factor,
                                                             1 / gain);
         SCOPED_TRACE(
-            StringF("Parametric filter comparisons (Q = %f) with center "
-                    "frequency = %f and gain %f.",
-                    quality_factor, center_frequency_hz, gain));
+            StrFormat("Parametric filter comparisons (Q = %f) with center "
+                      "frequency = %f and gain %f.",
+                      quality_factor, center_frequency_hz, gain));
         // The amplification filters are the same.
         for (float factor = 0.1; factor < 10; factor *= 1.3) {
           ASSERT_EQ(amplified_coeffs.GainMagnitudeAtFrequency(
@@ -490,8 +485,8 @@ TEST(BiquadFilterDesignTest, AllpassCoefficientsTest) {
                                           corner_frequency_hz,
                                           quality_factor);
       SCOPED_TRACE(
-          StringF("Allpass (quality_factor = %f) with pole frequency = %f.",
-                  quality_factor, corner_frequency_hz));
+          StrFormat("Allpass (quality_factor = %f) with pole frequency = %f.",
+                    quality_factor, corner_frequency_hz));
       // There is a discontinuity at corner_frequency_hz where the phase
       // switches from -pi to pi radians.
       ASSERT_THAT(coeffs, PhaseResponseDecreases(
@@ -518,7 +513,7 @@ TEST(BiquadFilterDesignTest, AllpassCoefficientsTest) {
 }
 
 string ToString(const complex<double>& value) {
-  return util::format::StringF("%g+%gj", value.real(), value.imag());
+  return absl::StrFormat("%g+%gj", value.real(), value.imag());
 }
 
 // TODO: Replace this with a matcher once there is a tolerance that
@@ -708,8 +703,9 @@ TEST(PoleZeroFilterDesignTest, ButterworthLowpassTest) {
       BiquadFilterCascadeCoefficients coeffs =
           ButterworthFilterDesign(order).LowpassCoefficients(
               kSampleRateHz, corner_frequency_hz);
-      SCOPED_TRACE(StringF("Butterworth lowpass with corner = %f and order %d.",
-                           corner_frequency_hz, order));
+      SCOPED_TRACE(
+          StrFormat("Butterworth lowpass with corner = %f and order %d.",
+                    corner_frequency_hz, order));
       ASSERT_THAT(coeffs, MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                               0.0f, kSampleRateHz));
       ASSERT_THAT(coeffs,
@@ -731,8 +727,8 @@ TEST(PoleZeroFilterDesignTest, ButterworthHighpassCoefficientsTest) {
           ButterworthFilterDesign(order).HighpassCoefficients(
               kSampleRateHz, corner_frequency_hz);
       SCOPED_TRACE(
-          StringF("Butterworth highpass with corner = %f and order %d.",
-                  corner_frequency_hz, order));
+          StrFormat("Butterworth highpass with corner = %f and order %d.",
+                    corner_frequency_hz, order));
       ASSERT_THAT(coeffs,
                   MagnitudeResponseIs(DoubleNear(0.0, kTolerance),
                                       0.0f, kSampleRateHz));
@@ -759,8 +755,8 @@ TEST(PoleZeroFilterDesignTest, ButterworthBandpassCoefficientsTest) {
             ButterworthFilterDesign(order).BandpassCoefficients(
                 kSampleRateHz, low_frequency_hz, high_frequency_hz);
         SCOPED_TRACE(
-            StringF("Butterworth bandpass (order %d) with range = [%f, %f].",
-                    order, low_frequency_hz, high_frequency_hz));
+            StrFormat("Butterworth bandpass (order %d) with range = [%f, %f].",
+                      order, low_frequency_hz, high_frequency_hz));
         ASSERT_THAT(coeffs,
                     MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
                                         center_frequency_hz, kSampleRateHz));
@@ -785,8 +781,8 @@ TEST(PoleZeroFilterDesignTest, ButterworthBandstopCoefficientsTest) {
             ButterworthFilterDesign(order).BandstopCoefficients(
                 kSampleRateHz, low_frequency_hz, high_frequency_hz);
         SCOPED_TRACE(
-            StringF("Butterworth bandstop (order %d) with range = [%f, %f].",
-                    order, low_frequency_hz, high_frequency_hz));
+            StrFormat("Butterworth bandstop (order %d) with range = [%f, %f].",
+                      order, low_frequency_hz, high_frequency_hz));
         ASSERT_THAT(coeffs,
                     MagnitudeResponseIs(DoubleNear(0.0, kTolerance),
                                         center_frequency_hz, kSampleRateHz));

@@ -51,6 +51,7 @@ ParametricEqualizerParams ParametricEqualizerParamsForTest(
 
 TEST(ParametricEqualizerParamsTest, EnableDisableTest) {
   ParametricEqualizerParams params;
+  EXPECT_EQ(params.GetGainDb(), 0);  // Initial gain is zero dB.
   EXPECT_EQ(params.GetNumEnabledStages(), 0);
   EXPECT_EQ(params.GetTotalNumStages(), 0);
 

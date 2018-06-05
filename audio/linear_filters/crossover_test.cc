@@ -28,8 +28,8 @@
 namespace linear_filters {
 namespace {
 
+using ::absl::StrFormat;
 using ::audio_dsp::AmplitudeRatioToDecibels;
-using ::util::format::StringF;
 
 static constexpr float kSampleRate = 48000.0;
 static constexpr float kNyquist = kSampleRate / 2;
@@ -65,8 +65,8 @@ float CombinedGainDb(float crossover_frequency_hz,  float sample_rate_hz,
 
 TEST(CrossoverTest, FirstOrderTest) {
   for (float crossover_frequency_hz : {850.0, 1200.0}) {
-    SCOPED_TRACE(StringF("First order, crossover = %f.",
-                         crossover_frequency_hz));
+    SCOPED_TRACE(
+        StrFormat("First order, crossover = %f.", crossover_frequency_hz));
     CrossoverFilterDesign crossover(CrossoverType::kButterworth, 1,
                                     crossover_frequency_hz, kSampleRate);
     // Tests that in the limit frequency -> 0, the slope is -6dB/octave per
@@ -92,8 +92,8 @@ bool PhasesNear(double actual, double expected, double tolerance) {
 TEST(CrossoverTest, HigherOrderButterworthTest) {
   for (int order : {2, 3, 4, 6}) {
     for (float crossover_frequency_hz : {850.0, 1200.0}) {
-      SCOPED_TRACE(StringF("Butterworth: Order %d, crossover = %f.",
-                           order, crossover_frequency_hz));
+      SCOPED_TRACE(StrFormat("Butterworth: Order %d, crossover = %f.", order,
+                             crossover_frequency_hz));
       CrossoverFilterDesign crossover(CrossoverType::kButterworth, order,
                                       crossover_frequency_hz, kSampleRate);
       // Test that we get the expected rolloff and low and high frequencies.
@@ -133,8 +133,8 @@ TEST(CrossoverTest, HigherOrderButterworthTest) {
 TEST(CrossoverTest, LRTest) {
   for (int order : {2, 4, 6, 8}) {
     for (float crossover_frequency_hz : {850.0, 1200.0}) {
-      SCOPED_TRACE(StringF("Linkwitz-Riley: Order %d, crossover = %f.",
-                            order, crossover_frequency_hz));
+      SCOPED_TRACE(StrFormat("Linkwitz-Riley: Order %d, crossover = %f.", order,
+                             crossover_frequency_hz));
       CrossoverFilterDesign crossover(CrossoverType::kLinkwitzRiley, order,
                                       crossover_frequency_hz, kSampleRate);
       // Test that we get the expected rolloff and low and high frequencies.

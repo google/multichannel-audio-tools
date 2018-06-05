@@ -110,8 +110,8 @@ MATCHER_P3(PhaseResponseIs, inner_matcher, frequency_hz, sample_rate_hz,
 //   low_frequency_hz < high_frequency_hz.
 // We check num_points logarithmically spaced frequencies on this range.
 MATCHER_P4(MagnitudeResponseIncreases, low, high, sample_rate_hz, num_points,
-           util::format::StringF(
-               "is monotonically increasing over [%f, %f]", low, high)) {
+           absl::StrFormat("is monotonically increasing over [%f, %f]", low,
+                           high)) {
   auto GetMagnitudeResponse = [arg](double frequency, double sample_rate) {
     return arg.GainMagnitudeAtFrequency(frequency, sample_rate);
   };
@@ -120,8 +120,8 @@ MATCHER_P4(MagnitudeResponseIncreases, low, high, sample_rate_hz, num_points,
 }
 
 MATCHER_P4(MagnitudeResponseDecreases, low, high, sample_rate_hz, num_points,
-           util::format::StringF(
-               "is monotonically decreasing over [%f, %f]", low, high)) {
+           absl::StrFormat("is monotonically decreasing over [%f, %f]", low,
+                           high)) {
   auto GetMagnitudeResponse = [arg](double frequency, double sample_rate) {
     return arg.GainMagnitudeAtFrequency(frequency, sample_rate);
   };
@@ -130,7 +130,7 @@ MATCHER_P4(MagnitudeResponseDecreases, low, high, sample_rate_hz, num_points,
 }
 
 MATCHER_P4(PhaseResponseIncreases, low, high, sample_rate_hz, num_points,
-           util::format::StringF(
+           absl::StrFormat(
                "has monotonically increasing phase over [%f, %f]", low, high)) {
   auto GetPhaseResponse = [arg](double frequency, double sample_rate) {
     return arg.PhaseResponseAtFrequency(frequency, sample_rate);
@@ -141,8 +141,8 @@ MATCHER_P4(PhaseResponseIncreases, low, high, sample_rate_hz, num_points,
 }
 
 MATCHER_P4(PhaseResponseDecreases, low, high, sample_rate_hz, num_points,
-           util::format::StringF(
-               "has monotonically decreasing phase over [%f, %f]", low, high)) {
+           absl::StrFormat("has monotonically decreasing phase over [%f, %f]",
+                           low, high)) {
   auto GetPhaseResponse = [arg](double frequency, double sample_rate) {
     return arg.PhaseResponseAtFrequency(frequency, sample_rate);
   };

@@ -50,7 +50,9 @@ namespace linear_filters {
 
 class ParametricEqualizerParams {
  public:
-  ParametricEqualizerParams() {}
+  ParametricEqualizerParams()
+    : gain_db_(0) {}
+
   ~ParametricEqualizerParams() {}
   // Bypassed stages create a stage of identity coefficients such that the order
   // of the filter is always the same.

@@ -19,6 +19,7 @@
 #include "audio/dsp/decibels.h"
 #include "audio/dsp/nelder_mead_searcher.h"
 #include "audio/linear_filters/biquad_filter_design.h"
+
 #include "third_party/eigen3/Eigen/Cholesky"
 #include "third_party/eigen3/Eigen/Core"
 
@@ -259,7 +260,7 @@ string ParametricEqualizerParams::ToString() const {
     }
     info += StageParams(i).ToString();
   }
-  info += util::format::StringF(" } gain_db: %f ", GetGainDb());
+  info += absl::StrFormat(" } gain_db: %f ", GetGainDb());
   return info;
 }
 

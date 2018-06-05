@@ -66,7 +66,7 @@
 //   while (...) {
 //     /* input_samples has num_channels rows. */
 //     Eigen::ArrayXXf input_samples = ...
-//     Eigen::ArrayXXf output_sample;
+//     Eigen::ArrayXXf output_samples;
 //     filter.ProcessBlock(input_samples, &output_samples);
 //     ...
 //   }
@@ -76,7 +76,7 @@
 //   filter.Init(7, {{b0, b1, b2}, {a0, a1, a2}});
 //   while (...) {
 //     Eigen::Array<float, 7, Eigen::Dynamic> input_samples = ...
-//     Eigen::Array<float, 7, Eigen::Dynamic> output_sample;
+//     Eigen::Array<float, 7, Eigen::Dynamic> output_samples;
 //     filter.ProcessBlock(input_samples, &output_samples);
 //     ...
 //   }

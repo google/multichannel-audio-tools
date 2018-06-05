@@ -295,6 +295,34 @@ TEST(DynamicRangeControl, InputOutputGainTest) {
   }
 }
 
+TEST(DynamicRangeControl, LimiterTest) {
+  constexpr int kNumChannels = 1;
+  constexpr int kNumSamples = 6;
+  Eigen::ArrayXXf input(kNumChannels, kNumSamples);
+  input << 1.0f,  0.9f, 0.4f, -0.4f, -0.9f, -1.0f;
+
+  Eigen::ArrayXXf output(kNumChannels, kNumSamples);
+  {
+    DynamicRangeControlParams params =
+        DynamicRangeControlParams::ReasonableLimiterParams();
+    // We aren't testing the envelope interpolation here. Make time constants
+    // small enough that filter behavior is negligable.
+    params.attack_s = 1e-6;
+    params.release_s = 1e-6;
+
+    params.dynamics_type = kLimiter;
+    params.threshold_db = -6.0;
+    DynamicRangeControl drc(params);
+    drc.Init(kNumChannels, kNumSamples, 48000.0f);
+    drc.ProcessBlock(input, &output);
+
+    Eigen::ArrayXXf expected(kNumChannels, kNumSamples);
+    float half = DecibelsToAmplitudeRatio(-6.0f);
+    expected << half, half, 0.4f, -0.4f, -half, -half;
+    EXPECT_THAT(output, EigenArrayNear(expected, 1e-2));
+  }
+}
+
 TEST(DynamicRangeControl, NoiseGateTest) {
   constexpr int kNumChannels = 2;
   constexpr int kNumSamples = 4;

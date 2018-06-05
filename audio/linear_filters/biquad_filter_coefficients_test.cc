@@ -31,10 +31,10 @@
 namespace linear_filters {
 namespace {
 
+using ::absl::StrFormat;
 using ::Eigen::Infinity;
 using ::std::complex;
 using ::std::vector;
-using ::util::format::StringF;
 
 using PolePair = std::pair<complex<double>, complex<double>>;
 
@@ -100,10 +100,8 @@ TEST(BiquadFilterCoefficientsTest, MaxGainTest) {
           BandpassBiquadFilterCoefficients(kSampleRateHz,
                                           center_frequency_hz,
                                           quality_factor);
-      SCOPED_TRACE(
-          StringF("Bandstop (Q = %f) with center frequency = %f.",
-          quality_factor,
-          center_frequency_hz));
+      SCOPED_TRACE(StrFormat("Bandstop (Q = %f) with center frequency = %f.",
+                             quality_factor, center_frequency_hz));
       EXPECT_NEAR(coeffs.FindPeakFrequencyRadiansPerSample().first,
                   center_frequency_hz * 2 * M_PI / kSampleRateHz, 1e-4);
       EXPECT_NEAR(coeffs.FindPeakFrequencyRadiansPerSample().second,
@@ -166,7 +164,7 @@ TEST(BiquadFilterCoefficientsTest, EstimateDecayTime) {
       {{1, 0, 0}, {1.0, -0.7, 0.94}}})) {  // 60dB decay time of 221 samples.
     SCOPED_TRACE("coeffs: " + coeffs.ToString());
     for (double decay_db : {20, 30, 40, 60}) {
-      SCOPED_TRACE(StringF("decay_db: %g", decay_db));
+      SCOPED_TRACE(StrFormat("decay_db: %g", decay_db));
       EXPECT_NEAR(coeffs.EstimateDecayTime(decay_db),
                   ReferenceDecayTime(coeffs, decay_db), 7);
     }

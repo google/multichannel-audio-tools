@@ -26,7 +26,7 @@
 namespace linear_filters {
 namespace {
 
-using ::util::format::StringF;
+using absl::StrFormat;
 
 class AuditoryFilterbankBuilderTestWithParam
     : public ::testing::TestWithParam<bool> {
@@ -59,7 +59,7 @@ TEST_P(AuditoryFilterbankBuilderTestWithParam, BasicTest) {
   // decreasing and that the number of samples per cycle isn't too high.
   float previous_peak_frequency_hz = kSampleRate;
   for (int stage = 0; stage < cascade_.GetFilterbankSize(); ++stage) {
-    SCOPED_TRACE(StringF("Stage %d. (decimation=%d)", stage, GetParam()));
+    SCOPED_TRACE(StrFormat("Stage %d. (decimation=%d)", stage, GetParam()));
     const float stage_sample_rate = cascade_.GetSampleRate(stage);
     const BiquadFilterCoefficients& stage_coeffs = coeffs[stage];
     float peak_frequency_rads_per_sample =
@@ -127,8 +127,8 @@ TEST_P(AuditoryFilterbankBuilderTestWithParam, PeaksAreOneTest) {
     ASSERT_GT(cascade_.BandwidthHz(stage), 24.0);
     ASSERT_LT(cascade_.BandwidthHz(stage), 3000.0);
     float peak_frequency = cascade_.PeakFrequencyHz(stage);
-    SCOPED_TRACE(StringF("Stage %d with peak = %f. (decimation=%d)",
-                         stage, peak_frequency, GetParam()));
+    SCOPED_TRACE(StrFormat("Stage %d with peak = %f. (decimation=%d)", stage,
+                           peak_frequency, GetParam()));
     float gain = FilterbankGainMagnitude(stage, peak_frequency);
     ASSERT_NEAR(gain, 1.0, 5e-5);
     // Make sure it actually is a peak.

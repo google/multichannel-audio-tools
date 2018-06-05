@@ -37,6 +37,7 @@
 namespace linear_filters {
 namespace {
 
+using ::absl::StrFormat;
 using ::audio_dsp::EigenArrayNear;
 using ::Eigen::Array;
 using ::Eigen::Array2Xf;
@@ -45,7 +46,6 @@ using ::Eigen::ArrayXXf;
 using ::Eigen::Dynamic;
 using ::std::complex;
 using ::std::vector;
-using ::util::format::StringF;
 
 // Get the name of Type as a string.
 template <typename Type>
@@ -334,8 +334,10 @@ TYPED_TEST(LadderFilterMultichannelScalarTypedTest,
   int sample_count = 0;
   for (int num_samples : {10, 300, 4, 1203, 8000, 13, 13000,
                           20, 433, 1234, 10000, 100}) {
-    SCOPED_TRACE(StringF("Filter has %d channels and has processed %d "
-                         "samples.", num_channels, sample_count));
+    SCOPED_TRACE(
+        StrFormat("Filter has %d channels and has processed %d "
+                  "samples.",
+                  num_channels, sample_count));
     BlockOfSamples input = BlockOfSamples::Random(num_channels, num_samples);
     BlockOfSamples ladder_output;
 
