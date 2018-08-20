@@ -24,7 +24,7 @@
 
 #include "audio/linear_filters/biquad_filter_coefficients.h"
 #include "gmock/gmock.h"
-
+#include "absl/strings/str_format.h"
 
 #include "audio/dsp/porting.h"  // auto-added.
 

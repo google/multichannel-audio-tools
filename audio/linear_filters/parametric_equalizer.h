@@ -25,7 +25,7 @@
 
 #include "audio/linear_filters/biquad_filter_coefficients.h"
 #include "audio/linear_filters/equalizer_filter_params.h"
-
+#include "absl/strings/str_format.h"
 #include "absl/types/span.h"
 #include "third_party/eigen3/Eigen/Core"
 

@@ -20,7 +20,7 @@
 #include "audio/linear_filters/biquad_filter_coefficients.h"
 #include "audio/linear_filters/biquad_filter_design.h"
 #include "gtest/gtest.h"
-
+#include "absl/strings/str_format.h"
 
 #include "audio/dsp/porting.h"  // auto-added.
 

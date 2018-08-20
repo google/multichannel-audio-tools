@@ -24,7 +24,7 @@
 #include "audio/dsp/types.h"
 #include "benchmark/benchmark.h"
 #include "gtest/gtest.h"
-
+#include "absl/strings/str_format.h"
 #include "third_party/eigen3/Eigen/Core"
 
 #include "audio/dsp/porting.h"  // auto-added.

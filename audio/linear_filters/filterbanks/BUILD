@@ -34,6 +34,7 @@ cc_test(
         "//audio/dsp:testing_util",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/strings:str_format",
         "@gtest//:gtest_main",
     ],
 )

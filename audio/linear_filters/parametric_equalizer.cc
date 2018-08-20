@@ -19,7 +19,7 @@
 #include "audio/dsp/decibels.h"
 #include "audio/dsp/nelder_mead_searcher.h"
 #include "audio/linear_filters/biquad_filter_design.h"
-
+#include "absl/strings/str_format.h"
 #include "third_party/eigen3/Eigen/Cholesky"
 #include "third_party/eigen3/Eigen/Core"
 

@@ -112,6 +112,8 @@ cc_test(
     deps = [
         ":elliptic_functions",
         ":porting",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
         "@gtest//:gtest_main",
     ],
 )
@@ -209,6 +211,7 @@ cc_test(
         ":porting",
         ":testing_util",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
         "@gtest//:gtest_main",
     ],
 )
@@ -247,6 +250,7 @@ cc_test(
         ":testing_util",
         ":types",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
         "@com_google_benchmark//:benchmark",
         "@gtest//:gtest_main",
     ],
@@ -299,6 +303,7 @@ cc_test(
         ":testing_util",
         ":types",
         "//third_party/eigen3",
+        "@com_google_absl//absl/strings:str_format",
         "@gtest//:gtest_main",
     ],
 )

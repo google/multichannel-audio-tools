@@ -32,6 +32,7 @@ cc_test(
         "//audio/dsp:types",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/strings:str_format",
         "@com_google_benchmark//:benchmark",
         "@gtest//:gtest_main",
     ],
@@ -59,6 +60,7 @@ cc_test(
         "//audio/dsp:porting",
         "//audio/dsp:testing_util",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/strings:str_format",
         "@gtest//:gtest_main",
     ],
 )
@@ -106,6 +108,7 @@ cc_library(
         "//audio/dsp:porting",
         "@com_github_glog_glog//:glog",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
         "@gtest//:gtest",
     ],
 )
@@ -145,6 +148,7 @@ cc_test(
         "//audio/dsp:decibels",
         "//audio/dsp:porting",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/strings:str_format",
         "@gtest//:gtest_main",
     ],
 )
@@ -270,6 +274,7 @@ cc_test(
         "//audio/dsp:testing_util",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/strings:str_format",
         "@com_google_benchmark//:benchmark",
         "@gtest//:gtest_main",
     ],
@@ -287,6 +292,7 @@ cc_library(
         "//audio/dsp:nelder_mead_searcher",
         "//audio/dsp:porting",
         "//third_party/eigen3",
+        "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/types:span",
     ],
 )

@@ -24,7 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/strings/str_cat.h"
-
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 
 #include "audio/dsp/porting.h"  // auto-added.

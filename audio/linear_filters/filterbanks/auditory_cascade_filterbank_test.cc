@@ -20,7 +20,7 @@
 #include "audio/linear_filters/filterbanks/auditory_cascade_filterbank_params.pb.h"
 #include "glog/logging.h"
 #include "gtest/gtest.h"
-
+#include "absl/strings/str_format.h"
 #include "third_party/eigen3/Eigen/Core"
 
 namespace linear_filters {

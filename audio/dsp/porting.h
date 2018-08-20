@@ -69,9 +69,4 @@ bool Demangle(const char *mangled, char *out, int out_size);
 string Demangle(const char* mangled);
 }  // namespace util
 
-namespace absl {
-string StrFormat(const char *fmt, ...);
-}  // namespace absl
-
-
 #endif  // AUDIO_DSP_OPEN_SOURCE_PORTING_H_
