@@ -78,6 +78,19 @@ TYPED_TEST(SignalGeneratorTypedTest, GenerateSine) {
   EXPECT_THAT(sine_wave, FloatArrayNear(expected_sin_wave, tolerance));
 }
 
+TEST(SignalGeneratorTest, GenerateSineEigen) {
+  constexpr float kAmplitude = 1;
+  Eigen::ArrayXf sine_wave =
+      GenerateSineEigen(kNumSamples, kSampleRate, kSinFrequency, kAmplitude);
+  std::vector<float> expected_sine_wave = GenerateBasicSineWave(
+      kNumSamples, kSampleRate, kSinFrequency, kAmplitude);
+  Eigen::Map<Eigen::ArrayXf> expected_sin_wave_array(expected_sine_wave.data(),
+                                                     kNumSamples);
+  EXPECT_LE(sine_wave.maxCoeff(), kAmplitude);
+  EXPECT_GE(sine_wave.minCoeff(), -kAmplitude);
+  EXPECT_TRUE(sine_wave.isApprox(expected_sin_wave_array));
+}
+
 // Verifies that the GenerateLinearArrayBroadsideImpulse function correction
 // populates only a signal impulse entry for each channel.
 TEST(SignalGeneratorTest, GenerateLinearArrayBroadsideImpulse) {

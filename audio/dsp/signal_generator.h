@@ -56,6 +56,11 @@ std::vector<ValueType> GenerateSine(int num_samples, float sample_rate,
   return sin_wave;
 }
 
+// Returns an audio frame containing a sinusoidal signal as an ArrayXf.
+Eigen::ArrayXf GenerateSineEigen(int num_samples, float sample_rate,
+                                 float frequency, float amplitude,
+                                 float phase_begin = 0.0);
+
 // Create a broadside impulse audio signal with the specified number of channels
 // and sample block size. Adds an impulse for each channel at the same time.
 // Assumes the array is linear. This function will work for ArrayXXf and

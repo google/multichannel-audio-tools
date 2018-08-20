@@ -280,8 +280,10 @@ cc_test(
 cc_library(
     name = "signal_generator",
     hdrs = ["signal_generator.h"],
+    srcs = ["signal_generator.cc"],
     deps = [
         ":porting",
+        "@com_github_glog_glog//:glog",
         "//third_party/eigen3",
     ],
 )

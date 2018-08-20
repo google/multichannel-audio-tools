@@ -29,10 +29,8 @@
 namespace audio_dsp {
 namespace {
 
-float CheckReferenceCompressor(float input_level_db,
-                               float threshold_db,
-                               float ratio,
-                               float knee_width_db) {
+float CheckReferenceCompressor(float input_level_db, float threshold_db,
+                               float ratio, float knee_width_db) {
   const float half_knee = knee_width_db / 2;
   if (input_level_db - threshold_db <= -half_knee) {
     return input_level_db;
@@ -41,37 +39,20 @@ float CheckReferenceCompressor(float input_level_db,
   } else {
     const float knee_end = input_level_db - threshold_db + half_knee;
     return input_level_db +
-        ((1 / ratio) - 1) * knee_end * knee_end / (knee_width_db * 2);
-  }
-}
-
-float CheckReferenceExpander(float input_level_db,
-                             float threshold_db,
-                             float ratio,
-                             float knee_width_db) {
-  const float half_knee = knee_width_db / 2;
-  if (input_level_db - threshold_db >= half_knee) {
-    return input_level_db;
-  } else if (input_level_db - threshold_db <= -half_knee) {
-    return threshold_db + (input_level_db - threshold_db) * ratio;
-  } else {
-    const float knee_end = input_level_db - threshold_db - half_knee;
-    return input_level_db +
-        (1 - ratio) * knee_end * knee_end / (knee_width_db * 2);
+           ((1 / ratio) - 1) * knee_end * knee_end / (knee_width_db * 2);
   }
 }
 
 // Helper functions for testing a single scalar at a time. Verifies that
 // a reference implementation is matched.
-float OutputLevelCompressor(float input, float threshold,
-                            float ratio, float knee) {
-  Eigen::ArrayXf input_arr(1);
-  Eigen::ArrayXf output_arr(1);
-  input_arr[0] = input;
+float OutputLevelCompressor(float input, float threshold, float ratio,
+                            float knee) {
+  Eigen::ArrayXf input_arr = Eigen::ArrayXf::Constant(1, input);
+  Eigen::ArrayXf output_arr = Eigen::ArrayXf::Constant(1, 0);
   ::audio_dsp::OutputLevelCompressor(input_arr, threshold, ratio, knee,
                                      &output_arr);
   EXPECT_NEAR(CheckReferenceCompressor(input, threshold, ratio, knee),
-                                       output_arr.value(), 1e-4f);
+              output_arr.value(), 1e-4f);
   return output_arr.value();
 }
 
@@ -81,21 +62,10 @@ float OutputLevelLimiter(float input, float threshold, float knee) {
   input_arr[0] = input;
   ::audio_dsp::OutputLevelLimiter(input_arr, threshold, knee, &output_arr);
   // A limiter is a compressor with a ratio of infinity.
-  EXPECT_NEAR(CheckReferenceCompressor(
-      input, threshold, std::numeric_limits<float>::infinity(), knee),
-              output_arr.value(), 1e-4f);
-  return output_arr.value();
-}
-
-float OutputLevelExpander(float input, float threshold,
-                          float ratio, float knee) {
-  Eigen::ArrayXf input_arr(1);
-  Eigen::ArrayXf output_arr(1);
-  input_arr[0] = input;
-  ::audio_dsp::OutputLevelExpander(input_arr, threshold, ratio, knee,
-                                   &output_arr);
-  EXPECT_NEAR(CheckReferenceExpander(input, threshold, ratio, knee),
-                                     output_arr.value(), 1e-4f);
+  EXPECT_NEAR(
+      CheckReferenceCompressor(input, threshold,
+                               std::numeric_limits<float>::infinity(), knee),
+      output_arr.value(), 1e-4f);
   return output_arr.value();
 }
 
@@ -109,170 +79,15 @@ float OutputLevelNoiseGate(float input, float threshold, float knee) {
   return output_arr.value();
 }
 
-TEST(ComputeGainTest, CompressorTest) {
-  // No knee, above the threshold.
-  EXPECT_FLOAT_EQ(OutputLevelCompressor(5.0f, 0.0f, 3.0f, 0.0f), 5.0f / 3.0f);
-  EXPECT_FLOAT_EQ(OutputLevelCompressor(5.0f, 0.0f, 6.0f, 0.0f), 5.0f / 6.0f);
-  EXPECT_FLOAT_EQ(OutputLevelCompressor(8.0f, 0.0f, 3.0f, 0.0f), 8.0f / 3.0f);
-  EXPECT_FLOAT_EQ(OutputLevelCompressor(8.0f, 0.0f, 6.0f, 0.0f), 8.0f / 6.0f);
-  EXPECT_FLOAT_EQ(OutputLevelCompressor(5.0f, -1.0f, 3.0f, 0.0f), 1.0f);
-  EXPECT_FLOAT_EQ(OutputLevelCompressor(8.0f, -1.0f, 3.0f, 0.0f),
-                  -1.0f + 9.0f / 3.0f);
-  // No knee, below the threshold, input = output.
-  for (float input = -40.0f; input < 20.0; input += 2.0) {
-    ASSERT_FLOAT_EQ(OutputLevelCompressor(input, input + 0.1, 3.0f, 0.0f),
-                    input);
-  }
-  // Add a knee and check for...
-  for (float input = -50.0f; input < 50.0f; input += 0.1) {
-    // Continuity.
-    ASSERT_NEAR(OutputLevelCompressor(input, -10.0f, 3.0f, 10.0f),
-                OutputLevelCompressor(input + 0.1, -10.0f, 3.0f, 10.0f),
-                0.1 + 1e-5);
-    // Monotonic decrease as knee increases.
-    for (float knee_db = 0.5f; knee_db < 30.0f; knee_db += 1.5) {
-      float new_knee = 10.0 + knee_db;
-      ASSERT_GE(OutputLevelCompressor(input, -10.0f, 3.0f, 10.0f),
-                OutputLevelCompressor(input, -10.0f, 3.0f, new_knee) - 1e-5);
-    }
-  }
-
-  // Check that knee kicks in at the right place.
-  for (float knee : {4.0, 8.0, 12.0}) {
-    float half_knee = knee / 2;
-    EXPECT_FLOAT_EQ(OutputLevelCompressor(-half_knee, 0.0f, 3.0f, 0.0f),
-                    OutputLevelCompressor(-half_knee, 0.0f, 3.0f, knee));
-    EXPECT_GT(
-        std::abs(OutputLevelCompressor(-(half_knee - 0.2f), 0.0f, 3.0f, 0.0f) -
-                 OutputLevelCompressor(-(half_knee - 0.2f), 0.0f, 3.0f, knee)),
-              1e-3);
-    EXPECT_GT(std::abs(OutputLevelCompressor(0.0f, 0.0f, 3.0f, 0.0f) -
-                      OutputLevelCompressor(0.0f, 0.0f, 3.0f, knee)), 3e-1);
-    EXPECT_GT(
-        std::abs(OutputLevelCompressor(half_knee - 0.2f, 0.0f, 3.0f, 0.0f) -
-                 OutputLevelCompressor(half_knee - 0.2f, 0.0f, 3.0f, knee)),
-              1e-3);
-    EXPECT_FLOAT_EQ(OutputLevelCompressor(half_knee, 0.0f, 3.0f, 0.0f),
-                    OutputLevelCompressor(half_knee, 0.0f, 3.0f, knee));
-  }
-}
-
-TEST(ComputeGainTest, LimiterTest) {
-  // No knee, above the threshold.
-  EXPECT_FLOAT_EQ(OutputLevelLimiter(5.0f, 0.0f, 0.0f), 0.0f);
-  EXPECT_FLOAT_EQ(OutputLevelLimiter(5.0f, 0.0f, 0.0f), 0.0f);
-  EXPECT_FLOAT_EQ(OutputLevelLimiter(8.0f, 0.0f, 0.0f), 0.0f);
-  EXPECT_FLOAT_EQ(OutputLevelLimiter(8.0f, 0.0f, 0.0f), 0.0f);
-  EXPECT_FLOAT_EQ(OutputLevelLimiter(5.0f, -1.0f, 0.0f), -1.0f);
-  EXPECT_FLOAT_EQ(OutputLevelLimiter(8.0f, -1.0f, 0.0f), -1.0f);
-  // No knee, below the threshold, input = output.
-  for (float input = -40.0f; input < 20.0; input += 2.0) {
-    ASSERT_FLOAT_EQ(OutputLevelLimiter(input, input + 0.1, 0.0f), input);
-  }
-  // No knee, above the threshold, input = threshold.
-  for (float input = -40.0f; input < 20.0; input += 2.0) {
-    float threshold_db = input - 0.1;
-    ASSERT_FLOAT_EQ(OutputLevelLimiter(input, threshold_db, 0.0f),
-                    threshold_db);
-  }
-  // Add a knee and check for...
-  for (float input = -50.0f; input < 50.0f; input += 0.1) {
-    // Continuity.
-    ASSERT_NEAR(OutputLevelLimiter(input, -10.0f, 10.0f),
-                OutputLevelLimiter(input + 0.1, -10.0f, 10.0f), 0.1 + 1e-5);
-    // Monotonic decrease as knee increases.
-    for (float knee_db = 0.5f; knee_db < 30.0f; knee_db += 1.5) {
-      float new_knee = 10.0 + knee_db;
-      ASSERT_GE(OutputLevelLimiter(input, -10.0f, 10.0f),
-                OutputLevelLimiter(input, -10.0f, new_knee) - 1e-5);
-    }
-  }
-  // Check that knee kicks in at the right place.
-  for (float knee : {4.0, 8.0, 12.0}) {
-    float half_knee = knee / 2;
-    EXPECT_FLOAT_EQ(OutputLevelLimiter(-half_knee, 0.0f, 0.0f),
-                    OutputLevelLimiter(-half_knee, 0.0f, knee));
-    EXPECT_GT(
-        std::abs(OutputLevelLimiter(-(half_knee - 0.2f), 0.0f, 0.0f) -
-                 OutputLevelLimiter(-(half_knee - 0.2f), 0.0f, knee)), 1e-3);
-    EXPECT_GT(std::abs(OutputLevelLimiter(0.0f, 0.0f, 0.0f) -
-                      OutputLevelLimiter(0.0f, 0.0f, knee)), 3e-1);
-    EXPECT_GT(
-        std::abs(OutputLevelLimiter(half_knee - 0.2f, 0.0f, 0.0f) -
-                 OutputLevelLimiter(half_knee - 0.2f, 0.0f, knee)), 1e-3);
-    EXPECT_FLOAT_EQ(OutputLevelLimiter(half_knee, 0.0f, 0.0f),
-                    OutputLevelLimiter(half_knee, 0.0f, knee));
-  }
-}
-
-TEST(ComputeGainTest, ExpanderTest) {
-  // No knee, below the threshold.
-  EXPECT_FLOAT_EQ(OutputLevelExpander(-5.0f, 0.0f, 3.0f, 0.0f), -15.0f);
-  EXPECT_FLOAT_EQ(OutputLevelExpander(-5.0f, 0.0f, 6.0f, 0.0f), -30.0f);
-  EXPECT_FLOAT_EQ(OutputLevelExpander(-8.0f, 0.0f, 3.0f, 0.0f), -24.0f);
-  EXPECT_FLOAT_EQ(OutputLevelExpander(-8.0f, 0.0f, 6.0f, 0.0f), -48.0f);
-  EXPECT_FLOAT_EQ(OutputLevelExpander(-5.0f, -1.0f, 3.0f, 0.0f), -13.0f);
-  EXPECT_FLOAT_EQ(OutputLevelExpander(-8.0f, -1.0f, 3.0f, 0.0f), -22.0f);
-  // No knee, below the threshold, input = output.
-  for (float input = -40.0f; input < 20.0; input += 2.0) {
-    ASSERT_FLOAT_EQ(OutputLevelExpander(input, input - 0.1, 3.0f, 0.0f),
-                    input);
-  }
-  // Add a knee and check for...
-  for (float input = -50.0f; input < 50.0f; input += 0.1) {
-    // Continuity.
-    ASSERT_NEAR(OutputLevelExpander(input, -10.0f, 3.0f, 10.0f),
-                OutputLevelExpander(input + 0.1, -10.0f, 3.0f, 10.0f),
-                0.3 /* ratio * 0.1 */ + 1e-5);
-    // Monotonic decrease as knee increases.
-    for (float knee_db = 0.5f; knee_db < 30.0f; knee_db += 1.5) {
-      float new_knee = 10.0 + knee_db;
-      ASSERT_GE(OutputLevelExpander(input, -10.0f, 3.0f, 10.0f),
-                OutputLevelExpander(input, -10.0f, 3.0f, new_knee) - 2e-5);
-    }
-  }
-
-  // Check that knee kicks in at the right place.
-  for (float knee : {4.0, 8.0, 12.0}) {
-    float half_knee = knee / 2;
-    EXPECT_FLOAT_EQ(OutputLevelExpander(-half_knee, 0.0f, 3.0f, 0.0f),
-                    OutputLevelExpander(-half_knee, 0.0f, 3.0f, knee));
-    EXPECT_GT(
-        std::abs(OutputLevelExpander(-(half_knee - 0.2f), 0.0f, 3.0f, 0.0f) -
-                 OutputLevelExpander(-(half_knee - 0.2f), 0.0f, 3.0f, knee)),
-              1e-3);
-    EXPECT_GT(std::abs(OutputLevelExpander(0.0f, 0.0f, 3.0f, 0.0f) -
-                      OutputLevelExpander(0.0f, 0.0f, 3.0f, knee)), 3e-1);
-    EXPECT_GT(
-        std::abs(OutputLevelExpander(half_knee - 0.2f, 0.0f, 3.0f, 0.0f) -
-                 OutputLevelExpander(half_knee - 0.2f, 0.0f, 3.0f, knee)),
-              1e-3);
-    EXPECT_FLOAT_EQ(OutputLevelExpander(half_knee, 0.0f, 3.0f, 0.0f),
-                    OutputLevelExpander(half_knee, 0.0f, 3.0f, knee));
-  }
-}
-
-TEST(ComputeGainTest, NoiseGateTest) {
-  // No knee, below the threshold.
-  EXPECT_LT(OutputLevelNoiseGate(-5.0f, 0.0f, 0.0f), -140.0f);
-  EXPECT_LT(OutputLevelNoiseGate(-5.0f, 0.0f, 0.0f), -140.0f);
-  EXPECT_LT(OutputLevelNoiseGate(-8.0f, 0.0f, 0.0f), -140.0f);
-  EXPECT_LT(OutputLevelNoiseGate(-8.0f, 0.0f, 0.0f), -140.0f);
-  EXPECT_LT(OutputLevelNoiseGate(-5.0f, -1.0f, 0.0f), -140.0f);
-  EXPECT_LT(OutputLevelNoiseGate(-8.0f, -1.0f, 0.0f), -140.0f);
-  // // No knee, above the threshold, input = output.
-  for (float input = -40.0f; input < 20.0; input += 2.0) {
-    EXPECT_FLOAT_EQ(OutputLevelNoiseGate(input, input - 0.1, 0.0f), input);
-    EXPECT_LT(OutputLevelNoiseGate(input, input + 0.4, 0.0f), -140.0f);
-  }
-}
-
 TEST(DynamicRangeControl, InputOutputGainTest) {
   constexpr int kNumChannels = 2;
   constexpr int kNumSamples = 4;
   Eigen::ArrayXXf input(kNumChannels, kNumSamples);
+
+  // clang-format on
   input << 0.1, 0.1, 0.1, 0.2,
-           0.3, 0.3, 0.3, 0.0;
+          0.3, 0.3, 0.3, 0.0;
+  // clang-format off
 
   Eigen::ArrayXXf output(kNumChannels, kNumSamples);
   {  // Input gain scales output linearly (below threshold).
@@ -299,7 +114,7 @@ TEST(DynamicRangeControl, LimiterTest) {
   constexpr int kNumChannels = 1;
   constexpr int kNumSamples = 6;
   Eigen::ArrayXXf input(kNumChannels, kNumSamples);
-  input << 1.0f,  0.9f, 0.4f, -0.4f, -0.9f, -1.0f;
+  input << 1.0f, 0.9f, 0.4f, -0.4f, -0.9f, -1.0f;
 
   Eigen::ArrayXXf output(kNumChannels, kNumSamples);
   {
@@ -327,8 +142,11 @@ TEST(DynamicRangeControl, NoiseGateTest) {
   constexpr int kNumChannels = 2;
   constexpr int kNumSamples = 4;
   Eigen::ArrayXXf input(kNumChannels, kNumSamples);
+
+  // clang-format off
   input << 0.1, 0.1, 0.1, 0.2,
-           0.3, 0.3, 0.3, 0.0;
+          0.3, 0.3, 0.3, 0.0;
+  // clang-format on
 
   Eigen::ArrayXXf output(kNumChannels, kNumSamples);
   {  // Signal is completely attenuated because it is below the threshold.
@@ -346,16 +164,27 @@ TEST(DynamicRangeControl, SidechainTest) {
   constexpr int kNumChannels = 2;
   constexpr int kNumSamples = 4;
   Eigen::ArrayXXf input(kNumChannels, kNumSamples);
+
+  // clang-format off
   input << 0.1, 0.1, 0.1, 0.2,
-           0.3, 0.3, 0.3, 0.0;
+          0.3, 0.3, 0.3, 0.0;
+  // clang-format on
+
   // Since we're using a noise gate, sidechain is basically a time-varying
   // mask.
   Eigen::ArrayXXf sidechain(kNumChannels, kNumSamples);
+
+  // clang-format off
   sidechain << 0.0, 1.0, 0.0, 0.0,
-               0.0, 1.0, 1.0, 0.0;
+              0.0, 1.0, 1.0, 0.0;
+  // clang-format on
+
   Eigen::ArrayXXf expected(kNumChannels, kNumSamples);
+
+  // clang-format off
   expected << 0.0, 0.1, 0.1, 0.0,
-              0.0, 0.3, 0.3, 0.0;
+             0.0, 0.3, 0.3, 0.0;
+  // clang-format on
 
   Eigen::ArrayXXf output(kNumChannels, kNumSamples);
   {  // Signal is completely attenuated because it is below the threshold.
@@ -390,8 +219,8 @@ TEST(DynamicRangeControl, CompressesSignalTest) {
     drc.ProcessBlock(input, &output);
 
     float expected_db = kInputGainDb / params.ratio;
-    EXPECT_FLOAT_EQ(OutputLevelCompressor(
-        kInputGainDb, params.threshold_db, params.ratio, params.knee_width_db),
+    EXPECT_FLOAT_EQ(OutputLevelCompressor(kInputGainDb, params.threshold_db,
+                                          params.ratio, params.knee_width_db),
                     expected_db);
     Eigen::ArrayXXf expected = Eigen::ArrayXXf::Constant(
         kNumChannels, kNumSamples, DecibelsToAmplitudeRatio(expected_db));
@@ -408,8 +237,8 @@ TEST(DynamicRangeControl, CompressesSignalTest) {
     drc.ProcessBlock(input, &output);
 
     float expected_db = kInputGainDb / params.ratio;
-    EXPECT_FLOAT_EQ(OutputLevelCompressor(
-        kInputGainDb, params.threshold_db, params.ratio, params.knee_width_db),
+    EXPECT_FLOAT_EQ(OutputLevelCompressor(kInputGainDb, params.threshold_db,
+                                          params.ratio, params.knee_width_db),
                     expected_db);
     Eigen::ArrayXXf expected = Eigen::ArrayXXf::Constant(
         kNumChannels, kNumSamples, DecibelsToAmplitudeRatio(expected_db));
@@ -554,9 +383,9 @@ TEST(DynamicRangeControl, LookaheadTest) {
   const int size_minus_delay = kBlockSize - kDelaySamples;
   EXPECT_THAT(output_delayed.rightCols(size_minus_delay),
               EigenArrayNear(output.leftCols(size_minus_delay), 1e-5));
-  EXPECT_THAT(output_delayed.leftCols(kDelaySamples),
-              EigenArrayNear(Eigen::ArrayXXf::Zero(kOneChannel, kDelaySamples),
-                             1e-5));
+  EXPECT_THAT(
+      output_delayed.leftCols(kDelaySamples),
+      EigenArrayNear(Eigen::ArrayXXf::Zero(kOneChannel, kDelaySamples), 1e-5));
 }
 
 TEST(DynamicRangeControl, LookaheadImpulseTest) {
@@ -603,8 +432,7 @@ TEST(DynamicRangeControl, LookaheadImpulseTest) {
     output_delayed_impulse_energy +=
         output_delayed.square()(0, kImpulseTime + kDelaySamples + i);
   }
-  EXPECT_GT(output_impulse_energy,
-            output_delayed_impulse_energy * 1.5);
+  EXPECT_GT(output_impulse_energy, output_delayed_impulse_energy * 1.5);
 }
 
 void BM_Compressor(benchmark::State& state) {
