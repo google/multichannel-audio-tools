@@ -69,7 +69,8 @@
 //    Map<const ArrayXXf> sidechain_block(sidechain_samples.data() + i,
 //                                        num_channels, kFramesPerBlock);
 //    Map<ArrayXXf> output_block(...);       /* Same as above. */
-//    drc.ProcessBlock(input_block, sidechain_block, &output_block);
+//    drc.ProcessBlockWithSidechain(input_block, sidechain_block,
+//                                  &output_block);
 //  }
 //
 //  /**

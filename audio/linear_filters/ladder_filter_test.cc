@@ -123,7 +123,7 @@ template <typename T>
 class LadderFilterScalarTypedTest : public ::testing::Test {};
 
 typedef ::testing::Types<float, double> ScalarTypes;
-TYPED_TEST_CASE(LadderFilterScalarTypedTest, ScalarTypes);
+TYPED_TEST_SUITE(LadderFilterScalarTypedTest, ScalarTypes);
 
 // Tests to make sure LadderFilter and BiquadFilter produce the same result.
 TYPED_TEST(LadderFilterScalarTypedTest, MatchesBiquadFilter) {
@@ -236,7 +236,7 @@ typedef ::testing::Types<
     Eigen::Vector3cf
     >
     SampleTypes;
-TYPED_TEST_CASE(LadderFilterMultichannelTypedTest, SampleTypes);
+TYPED_TEST_SUITE(LadderFilterMultichannelTypedTest, SampleTypes);
 
 // Test LadderFilter<SampleType> against BiquadFilter<SampleType> for different
 // template args.
@@ -281,7 +281,7 @@ template <typename T>
 class LadderFilterMultichannelScalarTypedTest : public ::testing::Test {};
 
 typedef ::testing::Types<float, double> ScalarSampleTypes;
-TYPED_TEST_CASE(LadderFilterMultichannelScalarTypedTest, ScalarSampleTypes);
+TYPED_TEST_SUITE(LadderFilterMultichannelScalarTypedTest, ScalarSampleTypes);
 
 // We will smooth between the coefficients of two eighth order filters
 // with very different looking transfer functions. This should be a pretty

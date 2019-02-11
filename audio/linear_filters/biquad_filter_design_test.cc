@@ -833,7 +833,7 @@ typedef ::testing::Types<
 //     ChebyshevType2DefinedFilterDesign,
 //     EllipticDefinedFilterDesign
     > TestTypes;
-TYPED_TEST_CASE(PoleZeroFilterDesignTypedTest, TestTypes);
+TYPED_TEST_SUITE(PoleZeroFilterDesignTypedTest, TestTypes);
 
 constexpr float kTransitionFactor = 3;
 

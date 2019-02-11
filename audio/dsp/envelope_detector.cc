@@ -90,7 +90,7 @@ bool EnvelopeDetector::ProcessBlock(const ArrayXXf& input, ArrayXXf* output) {
     }
   }
   // Undo the square to obtain the RMS value.
-  *output = output->array().max(0).sqrt();
+  *output = output->array().abs().sqrt();
   // Store the most recent output so that we always have a level estimate,
   // even when Process didn't have enough input samples to produce any output
   // samples.

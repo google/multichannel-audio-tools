@@ -285,8 +285,6 @@ MATCHER_P(EigenEach, inner_matcher,
 }  // namespace audio_dsp
 
 namespace Eigen {
-// Pretty prints an Eigen::Array on a gunit test failures.  See
-// http://wiki/Main/GUnitAdvanced#Teaching_gUnit_How_to_Print_Your
 template <typename Scalar, int Rows, int Cols, int Options, int MaxRows,
           int MaxCols>
 void PrintTo(const Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& array,

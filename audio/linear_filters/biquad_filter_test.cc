@@ -683,7 +683,7 @@ typedef ::testing::Types<
     Eigen::Vector3f,
     Eigen::Vector3cf
     > TestTypes;
-TYPED_TEST_CASE(BiquadFilterTypedTest, TestTypes);
+TYPED_TEST_SUITE(BiquadFilterTypedTest, TestTypes);
 
 // Test BiquadFilter<SampleType> for different template args.
 TYPED_TEST(BiquadFilterTypedTest, BiquadFilter) {

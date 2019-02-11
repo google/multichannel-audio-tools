@@ -43,9 +43,9 @@ class AuditoryFilterbankBuilderTestWithParam
   AuditoryCascadeFilterbank cascade_;
 };
 
-INSTANTIATE_TEST_CASE_P(
-    AllowingDownsampling, AuditoryFilterbankBuilderTestWithParam,
-    testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(AllowingDownsampling,
+                         AuditoryFilterbankBuilderTestWithParam,
+                         testing::Values(false, true));
 
 TEST_P(AuditoryFilterbankBuilderTestWithParam, BasicTest) {
   // 75 filters are in the default filterbank. This is consistent with the

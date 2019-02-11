@@ -61,7 +61,7 @@ class SignalGeneratorTypedTest : public ::testing::Test {};
 
 // Different arithmetic ValueType types to test.
 typedef ::testing::Types<float, double, int16, int32, int64> TestTypes;
-TYPED_TEST_CASE(SignalGeneratorTypedTest, TestTypes);
+TYPED_TEST_SUITE(SignalGeneratorTypedTest, TestTypes);
 
 // Test SignalGenerator for different template args.
 TYPED_TEST(SignalGeneratorTypedTest, GenerateSine) {

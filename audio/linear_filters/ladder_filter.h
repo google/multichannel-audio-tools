@@ -131,6 +131,13 @@ class LadderFilter {
   // The passed-in coefficients must be such that the order of the filter does
   // not change.
   //
+  // For radical filter changes, it is better to interpolate in smaller steps.
+  // Ladder filter interpolation insures stability, but does not guarantee
+  // a nice transition of filter shapes. You can control the transition of
+  // filter shapes better by computing an update for the filter shape once per
+  // audio block and updating gradually. See examples/ladder_filter_autowah.cc
+  // for an example.
+  //
   // Note that you only pay the additional cost of the coefficient smoothing in
   // the several milliseconds after requesting a coefficient change. Once the
   // coefficients settle, the filter is cheap again.

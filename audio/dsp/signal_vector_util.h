@@ -533,7 +533,7 @@ float QuadraticInterpolateMax(const ContainerType& signal, int x0,
     return signal[x0] + (b + a * delta) * delta;
   } else {
     // signal is locally convex, select the larger endpoint.
-    x0 += copysign(1, b);
+    x0 += std::copysign(1, b);
     *max_location = x0;
     return signal[x0];
   }

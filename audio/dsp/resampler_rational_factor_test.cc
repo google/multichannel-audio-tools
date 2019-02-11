@@ -102,7 +102,7 @@ class ResamplerRationalFactorTypedTest : public ::testing::Test {
 
 typedef ::testing::Types<float, double, complex<float>, complex<double>>
     TestResamplerTypes;
-TYPED_TEST_CASE(ResamplerRationalFactorTypedTest, TestResamplerTypes);
+TYPED_TEST_SUITE(ResamplerRationalFactorTypedTest, TestResamplerTypes);
 
 // Implement resampling directly according to
 //   x'[m] = x(m/F') = sum_n x[n] h(m F/F' - n),

@@ -304,7 +304,7 @@ TEST(ParametricEqualizerTest, CanMatchResponse_EstimateAllParams) {
   EXPECT_NEAR(rms_error, 0, kToleranceDb);
 
   // See if we can converge to a tighter tolerance.
-  const float kTightToleranceDb = 0.06;
+  const float kTightToleranceDb = 0.13;
   fit_params.magnitude_db_rms_error_tol = kTightToleranceDb / 20;
   fit_params.max_iterations = 2000;
   fit_params.inner_convergence_params.convergence_threshold_db =

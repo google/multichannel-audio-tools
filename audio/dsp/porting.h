@@ -21,6 +21,9 @@
 #include <cmath>
 #include <string>
 
+#define TYPED_TEST_SUITE TYPED_TEST_CASE
+#define INSTANTIATE_TEST_SUITE_P INSTANTIATE_TEST_CASE_P
+
 using std::string;
 
 typedef uint8_t uint8;

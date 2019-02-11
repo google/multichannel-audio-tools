@@ -16,7 +16,7 @@
 
 #include "audio/dsp/testing_util.h"
 
-#include <math.h>
+#include <cmath>
 #include <complex>
 #include <deque>
 #include <initializer_list>
@@ -54,7 +54,7 @@ class FloatArrayNearContainerTypeTest : public ::testing::Test {};
 typedef ::testing::Types<std::vector<float>, std::deque<float>,
                          std::list<float>, Span<const float>>
     TestContainerTypes;
-TYPED_TEST_CASE(FloatArrayNearContainerTypeTest, TestContainerTypes);
+TYPED_TEST_SUITE(FloatArrayNearContainerTypeTest, TestContainerTypes);
 
 TYPED_TEST(FloatArrayNearContainerTypeTest, MatchesApproximately) {
   typedef TypeParam ContainerType;
@@ -127,7 +127,7 @@ TEST(FloatArrayEqTest, TypicalUse) {
 template <typename ContainerType>
 class FloatArrayEqContainerTypeTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(FloatArrayEqContainerTypeTest, TestContainerTypes);
+TYPED_TEST_SUITE(FloatArrayEqContainerTypeTest, TestContainerTypes);
 
 TYPED_TEST(FloatArrayEqContainerTypeTest, MatchesApproximately) {
   typedef TypeParam ContainerType;
