@@ -8,6 +8,16 @@ git_repository(
     commit = "ad5c960b2eb914881d1ceba0e996a0a8f3f6ca59",
 )
 
+# ===== fft2 =====
+http_archive(
+    name = "fft2d",
+    build_file = "fft2d.BUILD",
+    sha256 = "ada7e99087c4ed477bfdf11413f2ba8db8a840ba9bbf8ac94f4f3972e2a7cec9",
+    urls = [
+        "http://www.kurims.kyoto-u.ac.jp/~ooura/fft2d.tgz",
+    ],
+)
+
 # ===== gtest =====
 git_repository(
     name = "gtest",
@@ -16,7 +26,6 @@ git_repository(
 )
 
 # ===== eigen =====
-
 http_archive(
     name = "eigen",
     build_file = "eigen.BUILD",
@@ -29,7 +38,6 @@ http_archive(
 )
 
 # ===== benchmark =====
-
 git_repository(
     name = "com_google_benchmark",
     remote = "https://github.com/google/benchmark.git",
@@ -37,7 +45,6 @@ git_repository(
 )
 
 # ===== gflags, required by glog =====
-
 http_archive(
     name = "com_github_gflags_gflags",
     sha256 = "6e16c8bc91b1310a44f3965e616383dbda48f83e8c1eaa2370a215057b00cabe",
@@ -47,8 +54,8 @@ http_archive(
         "https://github.com/gflags/gflags/archive/77592648e3f3be87d6c7123eb81cbad75f9aef5a.tar.gz",
     ],
 )
-# ===== glog =====
 
+# ===== glog =====
 http_archive(
     name = "com_github_glog_glog",
     url = "https://github.com/google/glog/archive/v0.3.5.zip",
@@ -56,6 +63,7 @@ http_archive(
     strip_prefix = "glog-0.3.5",
     build_file = "glog.BUILD",
 )
+
 # ===== protobuf =====
 # LICENSE: The Apache Software License, Version 2.0
 # proto_library rules implicitly depend on @com_google_protobuf//:protoc

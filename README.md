@@ -15,7 +15,6 @@ A non-exhaustive list of libraries in this repo:
   - auditory cascade filterbank
   - parametric equalizer
   - perceptual loudness filters for implementing ITU standards
-- a fast rational factor resampler (single channel only)
 - dynamic range control
   - compression
   - limiter
@@ -24,6 +23,10 @@ A non-exhaustive list of libraries in this repo:
   - multiband dynamic range control
 - envelope detectors
 - gmock matchers for vector/Eigen types
+- some other single-channel tools:
+  - a fast rational factor resampler
+  - spectrograms
+  - a mel-frequency cepstral coefficient calculator
 
 Contact multichannel-audio-tools-maintainers@google.com with questions/issues.
 
