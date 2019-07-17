@@ -442,7 +442,7 @@ void HermitianSmoothVector(float coefficient, float scale,
   const int n = signal->size();
   if (n < 2) return;
   // Number of values to flip above end for filtering continuity.
-  int extra_n = floor(3 * (scale + 1));  // Estimate; at least 3.
+  int extra_n = std::floor(3 * (scale + 1));  // Estimate; at least 3.
   if (extra_n >= n) {
     extra_n = n - 1;  // Reflect all but last value above the last value.
   }

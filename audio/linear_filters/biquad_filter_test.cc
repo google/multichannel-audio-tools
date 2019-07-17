@@ -16,6 +16,7 @@
 
 #include "audio/linear_filters/biquad_filter.h"
 
+#include <cmath>
 #include <complex>
 #include <random>
 #include <vector>
@@ -84,7 +85,7 @@ TEST(BiquadFilterTest, IirImpulseResponse) {
   constexpr int kNumSamples = 20;
   constexpr float a = 0.95;
   constexpr float omega = (2 * M_PI) / 7;  // Period of 7 samples.
-  const float cos_omega = cos(omega);
+  const float cos_omega = std::cos(omega);
   const BiquadFilterCoefficients coeffs = {{1.0, -a * cos_omega, 0.0},
                                            {1.0, -2 * a * cos_omega, a * a}};
   // The input is a unit impulse delayed by 3 samples.
@@ -99,7 +100,7 @@ TEST(BiquadFilterTest, IirImpulseResponse) {
   // The impulse response of the filter is a^n cos(omega n).
   ArrayXf expected = ArrayXf::Zero(kNumSamples);
   for (int n = 3; n < kNumSamples; ++n) {
-    expected[n] = pow(a, n - 3) * cos(omega * (n - 3));
+    expected[n] = std::pow(a, n - 3) * std::cos(omega * (n - 3));
   }
   EXPECT_THAT(output, EigenArrayNear(expected, 1e-5));
 

@@ -91,6 +91,120 @@ TEST(ResamplerRationalFactorTest, ResamplingConstruction) {
   EXPECT_EQ(resampler1.factor_denominator(), resampler2.factor_denominator());
 }
 
+namespace {
+// Finds the largest correlation between `output` and `chirp` over lags spaced
+// `search_step_s` apart with magnitude up to `search_radius_s`.
+template <typename Fun>
+double FindCorrelationPeak(const Eigen::ArrayXf& output, Fun chirp,
+                           double output_sample_rate,
+                           double search_radius_s,
+                           double search_step_s) {
+  const double output_duration_s = output.size() / output_sample_rate;
+  auto window = [output_duration_s](double t) {
+    return std::sin(M_PI * std::min(std::max(
+        t / output_duration_s, 0.0), 1.0)); };
+
+  const int search_radius_points =
+      static_cast<int>(std::ceil(search_radius_s / search_step_s));
+  double peak_lag_s = -std::numeric_limits<double>::infinity();
+  double peak_value = -std::numeric_limits<double>::infinity();
+  for (int k = -search_radius_points; k <= search_radius_points; ++k) {
+    const double lag_s = k * search_step_s;
+    double correlation = 0.0;
+    for (int i = 0; i < output.size(); ++i) {
+      const double t = i / output_sample_rate;
+      const double windowed_output = window(t) * output[i];
+      const double windowed_chirp = window(t + lag_s) * chirp(t + lag_s);
+      correlation += windowed_output * windowed_chirp;
+    }
+    if (correlation > peak_value) {
+      peak_lag_s = lag_s;
+      peak_value = correlation;
+    }
+  }
+  return peak_lag_s;
+}
+}  // namespace
+
+TEST(ResamplerRationalFactorTest, TimeAlignment) {
+  for (double input_sample_rate : {16000, 32000, 44100, 48000}) {
+    for (double output_sample_rate : {16000, 32000, 44100, 48000}) {
+      SCOPED_TRACE(absl::StrFormat("Resampling from %gHz to %gHz",
+                                   input_sample_rate, output_sample_rate));
+      const double max_frequency = 0.45 * std::min<double>(input_sample_rate,
+                                                           output_sample_rate);
+      constexpr double kDurationSeconds = 0.015;
+      auto chirp = [max_frequency, kDurationSeconds](double t) {
+        return std::sin(M_PI * max_frequency * t * t / kDurationSeconds); };
+
+      Eigen::ArrayXf input(
+          1 + static_cast<int>(kDurationSeconds * input_sample_rate));
+      for (int i = 0; i < input.size(); ++i) {
+        input[i] = chirp(i / input_sample_rate);
+      }
+
+      const int factor_numerator = input_sample_rate;
+      const int factor_denominator = output_sample_rate;
+      RationalFactorResampler<float> resampler(factor_numerator,
+                                               factor_denominator);
+
+      // When using `Reset()`, the input and output streams are time aligned. We
+      // check this by correlating the output with the continuous-time chirp.
+      resampler.Reset();
+      ASSERT_TRUE(resampler.Valid());
+      Eigen::ArrayXf output;
+      resampler.ProcessSamplesEigen(input, &output);
+
+      double search_radius_s = 2.1 * resampler.radius() / input_sample_rate;
+      double search_step_s = 0.25 / max_frequency;
+      double output_stream_delay_s = -FindCorrelationPeak(
+          output, chirp, output_sample_rate, search_radius_s, search_step_s);
+      ASSERT_NEAR(output_stream_delay_s, 0.0, search_step_s / 2);
+
+      // When using `ResetFullyPrimed()`, the output stream is delayed by
+      // `radius()` input samples.
+      resampler.ResetFullyPrimed();
+      ASSERT_TRUE(resampler.Valid());
+      resampler.ProcessSamplesEigen(input, &output);
+
+      output_stream_delay_s = -FindCorrelationPeak(
+          output, chirp, output_sample_rate, search_radius_s, search_step_s);
+      ASSERT_NEAR(output_stream_delay_s, resampler.radius() / input_sample_rate,
+                  search_step_s / 2);
+    }
+  }
+}
+
+// When using `ResetFullyPrimed()`, and provided that the input buffer size is a
+// multiple of `factor_numerator / gcd(factor_numerator, factor_denominator)`,
+// the output size is always exactly (input.size() * factor_denominator) /
+// factor_numerator.
+TEST(ResamplerRationalFactorTest, FullyPrimed) {
+  for (double input_sample_rate : {16000, 32000, 44100, 48000}) {
+    for (double output_sample_rate : {16000, 32000, 44100, 48000}) {
+      SCOPED_TRACE(absl::StrFormat("Resampling from %gHz to %gHz",
+                                   input_sample_rate, output_sample_rate));
+      int factor_numerator = input_sample_rate;
+      int factor_denominator = output_sample_rate;
+      int gcd = GreatestCommonDivisor(factor_numerator, factor_denominator);
+
+      int reduced_numerator = factor_numerator / gcd;
+      int reduced_denominator = factor_denominator / gcd;
+      RationalFactorResampler<float> resampler(reduced_numerator,
+                                               reduced_denominator);
+
+      Eigen::ArrayXf input = Eigen::ArrayXf::Zero(reduced_numerator);
+      Eigen::ArrayXf output;
+
+      resampler.ResetFullyPrimed();
+      for (int i = 0; i < 3; ++i) {
+        resampler.ProcessSamplesEigen(input, &output);
+        const int expected_output_size = reduced_denominator;
+        ASSERT_EQ(output.size(), expected_output_size);
+      }
+    }
+  }
+}
 
 template <typename ResamplerType>
 class ResamplerRationalFactorTypedTest : public ::testing::Test {

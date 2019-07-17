@@ -18,6 +18,9 @@
 
 namespace audio_dsp {
 
+using ::Eigen::ArrayXXf;
+using ::Eigen::Map;
+
 MultibandCompressor::MultibandCompressor(
     const MultibandCompressorParams& params)
   : num_channels_(0 /* uninitialized */),
@@ -26,6 +29,8 @@ MultibandCompressor::MultibandCompressor(
     band_splitter_(params.num_bands(),
                    params.crossover_order(),
                    params.crossover_type()) {
+  DCHECK_GT(params.num_bands(), 0)
+      << "You must configure the MultibandCompressorParams";
   per_band_drc_.reserve(params.num_bands());
 
   for (auto& drc_params : params.GetDynamicRangeControlParams()) {
@@ -56,15 +61,21 @@ void MultibandCompressor::Reset() {
 // column-major data, where the number of rows equals GetNumChannels().
 void MultibandCompressor::ProcessBlock(const Eigen::ArrayXXf& input,
                                        Eigen::ArrayXXf* output) {
+  output->resizeLike(input);
+  ProcessBlock(Map<const ArrayXXf>(input.data(), input.rows(), input.cols()),
+               Map<ArrayXXf>(output->data(), input.rows(), input.cols()));
+}
+
+void MultibandCompressor::ProcessBlock(Map<const ArrayXXf> input,
+                                       Map<ArrayXXf> output) {
   // TODO: Do we care about the phase delay introduced by each stage?
   band_splitter_.ProcessBlock(input);
   workspace_.resizeLike(input);
-  output->resizeLike(input);
-  output->setZero();
+  output.setZero();
   for (int i = 0; i < band_splitter_.num_bands(); ++i) {
     per_band_drc_[i].ProcessBlock(band_splitter_.FilteredOutput(i),
                                   &workspace_);
-    *output += workspace_;
+    output += workspace_;
   }
 }
 

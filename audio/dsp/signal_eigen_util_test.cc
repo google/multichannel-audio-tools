@@ -78,9 +78,13 @@ TEST(SignalEigenUtilTest, CircularSmoothThreeImpulsesDouble) {
 // Same test as above with complex floats.
 TEST(SignalEigenUtilTest, CircularSmoothThreeImpulsesComplex) {
   ArrayXcf data(5);
-  data << 1 + 1i, 0, 1+1i, 0, 1+1i;
+  data << std::complex<float>(1.0f, 1.0f), std::complex<float>(0.0f),
+      std::complex<float>(1.0f, 1.0f), std::complex<float>(0.0f),
+      std::complex<float>(1.0f, 1.0f);
   ArrayXcf expected(5);
-  expected << 0.9 + 0.9i, 0.2 + 0.2i, 0.8 + 0.8i, 0.2 + 0.2i, 0.9 + 0.9i;
+  expected << std::complex<float>(0.9f, 0.9f), std::complex<float>(0.2f, 0.2f),
+      std::complex<float>(0.8f, 0.8f), std::complex<float>(0.2f, 0.2f),
+      std::complex<float>(0.9f, 0.9f);
   ThreeTapSmoother<ArrayXcf> smoother(data.size());
   smoother.SmoothCircular(0.1, &data);
   EXPECT_THAT(data, EigenArrayNear(expected, 1e-5));
@@ -113,9 +117,13 @@ TEST(SignalEigenUtilTest, ReflectedSmoothTwoImpulses) {
 // Same test as above with complex floats.
 TEST(SignalEigenUtilTest, ReflectedSmoothThreeImpulsesComplex) {
   ArrayXcf data(5);
-  data << 1 + 1i, 0, 1+1i, 0, 1+1i;
+  data << std::complex<float>(1.0f, 1.0f), std::complex<float>(0.0f),
+      std::complex<float>(1.0f, 1.0f), std::complex<float>(0.0f),
+      std::complex<float>(1.0f, 1.0f);
   ArrayXcf expected(5);
-  expected << 0.8 + 0.8i, 0.2 + 0.2i, 0.8 + 0.8i, 0.2 + 0.2i, 0.8 + 0.8i;
+  expected << std::complex<float>(0.8f, 0.8f), std::complex<float>(0.2f, 0.2f),
+      std::complex<float>(0.8f, 0.8f), std::complex<float>(0.2f, 0.2f),
+      std::complex<float>(0.8f, 0.8f);
   ThreeTapSmoother<ArrayXcf> smoother(data.size());
   smoother.SmoothSymmetric(0.1, &data);
   EXPECT_THAT(data, EigenArrayNear(expected, 1e-5));

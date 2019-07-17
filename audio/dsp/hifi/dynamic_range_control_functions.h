@@ -52,6 +52,16 @@ void SmoothReLU(const InputEigenType& input, float transition_center,
   }
 }
 
+// Allows the functions below to support scalar types.
+inline void SmoothReLU(float input, float transition_center,
+                float transition_width, float* output) {
+  Eigen::Array<float, 1, 1> in;
+  Eigen::Array<float, 1, 1> out;
+  in[0] = input;
+  SmoothReLU(in, transition_center, transition_width, &out);
+  *output = out[0];
+}
+
 }  // namespace internal
 
 // The input-output characteristic for a compressor/limiter is such that below

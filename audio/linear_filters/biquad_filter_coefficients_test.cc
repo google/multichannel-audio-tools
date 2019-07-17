@@ -68,7 +68,7 @@ TEST(BiquadFilterCoefficientsTest, GetPoles) {
   }
   {  // Test a complex pair with denominator (25 + z^-2), poles are z = +/-0.2i.
     BiquadFilterCoefficients coeffs = {{1, 0, 0}, {25, 0, 1}};
-    EXPECT_THAT(coeffs.GetPoles(), PolePairNear(PolePair(-0.2i, 0.2i)));
+    EXPECT_THAT(coeffs.GetPoles(), PolePairNear(PolePair({0, -0.2}, {0, 0.2})));
     EXPECT_TRUE(coeffs.IsStable());
   }
   {  // Case that would have degraded precision with a naive quadratic formula

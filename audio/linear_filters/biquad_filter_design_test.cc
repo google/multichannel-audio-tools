@@ -16,6 +16,7 @@
 
 #include "audio/linear_filters/biquad_filter_design.h"
 
+#include <cmath>
 #include <complex>
 #include <vector>
 
@@ -174,7 +175,7 @@ TEST(BiquadFilterDesignTest, RangedBandpassCoefficientsTest) {
       // The actual center of the filter is located near the geometric mean of
       // the cutoff specifications.
       const float better_approximation_center =
-          sqrt(lower_band_edge_hz * upper_band_edge_hz);
+          std::sqrt(lower_band_edge_hz * upper_band_edge_hz);
 
       ASSERT_THAT(coeffs, MagnitudeResponseIs(DoubleNear(0.95, 0.051),
                                               better_approximation_center,
@@ -220,7 +221,7 @@ TEST(BiquadFilterDesignTest, RangedBandstopCoefficientsTest) {
       // The actual center of the filter is located near the geometric mean of
       // the cutoff specifications.
       const float better_approximation_center =
-          sqrt(lower_band_edge_hz * upper_band_edge_hz);
+          std::sqrt(lower_band_edge_hz * upper_band_edge_hz);
 
       ASSERT_THAT(coeffs, MagnitudeResponseIs(Le(0.01),
                                               better_approximation_center,

@@ -278,6 +278,32 @@ TEST(DynamicRangeControl, ResetTest) {
   EXPECT_THAT(output1, EigenArrayNear(output2, 1e-6));
 }
 
+TEST(DynamicRangeControl, ResetChangedParamsTest) {
+  constexpr int kNumChannels = 1;
+  constexpr int kNumSamples = 400;
+
+  Eigen::ArrayXXf input = Eigen::ArrayXXf::Random(kNumChannels, kNumSamples);
+  Eigen::ArrayXXf output1(kNumChannels, kNumSamples);
+  Eigen::ArrayXXf output2(kNumChannels, kNumSamples);
+
+  DynamicRangeControlParams params;
+  DynamicRangeControlParams params2;
+  params2.input_gain_db = 10;
+
+  DynamicRangeControl drc(params);  // Params will change to params2.
+  DynamicRangeControl drc2(params2);
+  drc.Init(kNumChannels, kNumSamples, 48000.0f);
+  drc2.Init(kNumChannels, kNumSamples, 48000.0f);
+  drc.SetDynamicRangeControlParams(params2);
+  // Reset should set the params equal to params2 without interpolation.
+  drc.Reset();
+  drc.ProcessBlock(input, &output1);
+  drc2.ProcessBlock(input, &output2);
+
+  EXPECT_THAT(output1, EigenArrayNear(output2, 1e-6));
+}
+
+
 TEST(DynamicRangeControl, InterpolatesCoeffsTest) {
   constexpr int kNumChannels = 1;
   constexpr int kNumSamples = 400;

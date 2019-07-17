@@ -31,6 +31,11 @@ namespace audio_dsp {
 
 class MultibandCompressorParams {
  public:
+  // The default constructor is useful for construction in a larger container
+  // but is insufficient for use in the MultibandCompressor.
+  MultibandCompressorParams()
+    : num_bands_(0 /* Uninitialized*/) {}
+
   // Note that frequencies_hz.size() must have num_bands - 1 elements.
   // Compression tuning is very application specific, so you should set
   // the compressor params for each stage before using this. See
@@ -138,8 +143,9 @@ class MultibandCompressor {
 
   // Process a block of samples. input is a 2D Eigen array with contiguous
   // column-major data, where the number of rows equals GetNumChannels().
-  void ProcessBlock(const Eigen::ArrayXXf& input,
-                    Eigen::ArrayXXf* output);
+  void ProcessBlock(const Eigen::ArrayXXf& input, Eigen::ArrayXXf* output);
+  void ProcessBlock(Eigen::Map<const Eigen::ArrayXXf> input,
+                    Eigen::Map<Eigen::ArrayXXf> output);
 
  private:
   int num_channels_;

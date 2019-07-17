@@ -34,7 +34,10 @@ void VerifyParams(const DynamicRangeControlParams& params) {
 
 DynamicRangeControl::DynamicRangeControl(
     const DynamicRangeControlParams& initial_params)
-      : params_(initial_params),
+      : num_channels_(0),
+        sample_rate_hz_(0),
+        max_block_size_samples_(0),
+        params_(initial_params),
         params_change_needed_(false) {
   VerifyParams(initial_params);
 }
@@ -73,6 +76,8 @@ void DynamicRangeControl::SetDynamicRangeControlParams(
 
 void DynamicRangeControl::Reset() {
   envelope_->Reset();
+  params_ = next_params_;
+  params_change_needed_ = false;
 }
 
 void DynamicRangeControl::ComputeGainFromDetectedSignal(VectorType* data_ptr) {

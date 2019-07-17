@@ -235,10 +235,39 @@ class RationalFactorResampler: public Resampler<ValueType> {
   int factor_numerator() const { return factor_numerator_; }
   int radius() const { return radius_; }
 
+  // Implements the `Reset()` method. Resets RationalFactorResampler initial
+  // state as if it had just been constructed. Resampler state is set such that
+  // the input and output streams are time-aligned, with the first output sample
+  // corresponding to the same point in time as the first input sample.
   void ResetImpl() override {
     phase_ = 0;
     delayed_input_.reserve(num_taps_);
+    // The number of filter taps is `2 * radius_ + 1`, and for `phase_ = 0`, the
+    // filtered output sample is time-aligned with the center tap's input
+    // sample. We prime the buffer with `radius_` zeros such that this center
+    // tap lands on the first given input sample.
     delayed_input_.assign(radius_, ValueType(0));
+  }
+
+  // Like `Reset()`, but sets the Resampler with a "fully primed" delayed input
+  // buffer, such that the first output sample can be produced as soon as the
+  // first input sample is available.
+  //
+  // When using this method, and provided that the input buffer size is a
+  // multiple of `factor_numerator / gcd(factor_numerator, factor_denominator)`,
+  // the output size is always exactly (input.size() * factor_denominator) /
+  // factor_numerator.
+  //
+  // NOTE: When using `ResetFullyPrimed()`, the input and output streams are
+  // *not* time aligned. The output stream is delayed by `radius()` input
+  // samples, i.e. the filtering latency of the resampler.
+  void ResetFullyPrimed() {
+    DCHECK(valid_);
+    phase_ = 0;
+    delayed_input_.reserve(num_taps_);
+    // Initialize with `num_taps - 1` zeros, so that when the first sample is
+    // given, we will have exactly enough to compute the first output sample.
+    delayed_input_.assign(num_taps_ - 1, ValueType(0));
   }
 
   bool ValidImpl() const override {
@@ -424,7 +453,7 @@ class RationalFactorResampler: public Resampler<ValueType> {
   //   o = ceil((fd * (a - num_taps + 1) - p) / fn).
   int ComputeOutputSizeFromCurrentState(int input_size) {
     const int64 min_consumed_input =
-        delayed_input_.size() + input_size - num_taps_ + 1;
+        static_cast<int64>(delayed_input_.size()) + input_size - num_taps_ + 1;
     if (min_consumed_input <= 0) {
       return 0;
     }
