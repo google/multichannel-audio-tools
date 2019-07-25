@@ -47,7 +47,7 @@ template<typename T> struct MathLimits {
 
 
 template <> struct MathLimits<float> {
-  static constexpr float kNaN = HUGE_VALF - HUGE_VALF;
+  static constexpr float kNaN = NAN;
   static constexpr float kPosInf = HUGE_VALF;
   static constexpr float kNegInf = -HUGE_VALF;
 };

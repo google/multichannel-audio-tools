@@ -27,7 +27,7 @@ git_repository(
 
 # ===== eigen =====
 http_archive(
-    name = "eigen",
+    name = "eigen_archive",
     build_file = "eigen.BUILD",
     sha256 = "f3d69ac773ecaf3602cb940040390d4e71a501bb145ca9e01ce5464cf6d4eb68",
     strip_prefix = "eigen-eigen-049af2f56331",
