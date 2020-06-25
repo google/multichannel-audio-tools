@@ -189,7 +189,8 @@ class NelderMeadSearcher {
   int argmax_index_;
   int num_evaluations_;
 
-  DISALLOW_COPY_AND_ASSIGN(NelderMeadSearcher);
+  NelderMeadSearcher(const NelderMeadSearcher&) = delete;
+  NelderMeadSearcher& operator=(const NelderMeadSearcher&) = delete;
 };
 
 // Implementation below. Avert your eyes.

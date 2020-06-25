@@ -21,19 +21,12 @@
 #include <cmath>
 #include <string>
 
-#define TYPED_TEST_SUITE TYPED_TEST_CASE
-#define INSTANTIATE_TEST_SUITE_P INSTANTIATE_TEST_CASE_P
-
 using std::string;
 
 typedef uint8_t uint8;
 typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
-
-#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&) = delete;      \
-  TypeName& operator=(const TypeName&) = delete
 
 #define ABSL_DIE_IF_NULL CHECK_NOTNULL
 

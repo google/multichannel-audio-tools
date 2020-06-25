@@ -38,7 +38,9 @@ class Dct {
   int coefficient_count_;
   int input_length_;
   std::vector<std::vector<double> > cosines_;
-  DISALLOW_COPY_AND_ASSIGN(Dct);
+
+  Dct(const Dct&) = delete;
+  Dct& operator=(const Dct&) = delete;
 };
 
 }  // namespace audio_dsp

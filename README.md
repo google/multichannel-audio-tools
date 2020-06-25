@@ -32,15 +32,10 @@ Contact multichannel-audio-tools-maintainers@google.com with questions/issues.
 
 This library is intended to be built with [Bazel](https://bazel.build/). See
 command below regarding running tests and building with the proper flags.
-
-Note that the final flag is used to get around a protobuf build issue.
-See https://github.com/tensorflow/tensorflow/issues/25000
-
 ```
 bazel test -c opt --cxxopt="-fext-numeric-literals" \
                   --cxxopt="-Wno-sign-compare" \
                   --cxxopt="-fpermissive" \
                   --cxxopt="-std=c++11" \
                   audio/... \
-                  --incompatible_disable_deprecated_attr_params=false
 ```

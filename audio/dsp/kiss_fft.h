@@ -111,7 +111,8 @@ class ComplexFFTTransformer {
   ComplexFFTTransformerImpl* impl_;
   bool normalization_;
 
-  DISALLOW_COPY_AND_ASSIGN(ComplexFFTTransformer);
+  ComplexFFTTransformer(const ComplexFFTTransformer&) = delete;
+  ComplexFFTTransformer& operator=(const ComplexFFTTransformer&) = delete;
 };
 
 // Perform real-to-complex and complex-to-real FFT transforms.
@@ -179,7 +180,8 @@ class RealFFTTransformer {
   RealFFTTransformerImpl* impl_;
   bool normalization_;
 
-  DISALLOW_COPY_AND_ASSIGN(RealFFTTransformer);
+  RealFFTTransformer(const RealFFTTransformer&) = delete;
+  RealFFTTransformer& operator=(const RealFFTTransformer&) = delete;
 };
 
 }  // namespace audio_dsp

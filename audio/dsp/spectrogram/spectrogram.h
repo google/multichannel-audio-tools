@@ -128,7 +128,8 @@ class Spectrogram {
   vector<int> fft_integer_working_area_;
   vector<double> fft_double_working_area_;
 
-  DISALLOW_COPY_AND_ASSIGN(Spectrogram);
+  Spectrogram(const Spectrogram&) = delete;
+  Spectrogram& operator=(const Spectrogram&) = delete;
 };
 
 }  // namespace audio_dsp

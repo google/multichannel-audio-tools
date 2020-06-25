@@ -71,7 +71,8 @@ class MelFilterbank {
   int start_index_;  // Lowest FFT bin used to calculate mel spectrum.
   int end_index_;  // Highest FFT bin used to calculate mel spectrum.
 
-  DISALLOW_COPY_AND_ASSIGN(MelFilterbank);
+  MelFilterbank(const MelFilterbank&) = delete;
+  MelFilterbank& operator=(const MelFilterbank&) = delete;
 };
 
 }  // namespace audio_dsp

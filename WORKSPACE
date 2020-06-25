@@ -23,11 +23,10 @@ http_archive(
 git_repository(
     name = "gtest",
     remote = "https://github.com/google/googletest.git",
-    tag = "release-1.8.1",
+    tag = "release-1.10.0",
 )
 
 # ==== kissfft ====
-
 new_git_repository(
     name = "kissfft",
     build_file = "kissfft.BUILD",
@@ -51,39 +50,50 @@ http_archive(
 git_repository(
     name = "com_google_benchmark",
     remote = "https://github.com/google/benchmark.git",
-    tag = "v1.5.0",
+    tag = "v1.5.1",
 )
 
 # ===== gflags, required by glog =====
-http_archive(
+git_repository(
     name = "com_github_gflags_gflags",
-    sha256 = "6e16c8bc91b1310a44f3965e616383dbda48f83e8c1eaa2370a215057b00cabe",
-    strip_prefix = "gflags-77592648e3f3be87d6c7123eb81cbad75f9aef5a",
-    urls = [
-        "https://mirror.bazel.build/github.com/gflags/gflags/archive/77592648e3f3be87d6c7123eb81cbad75f9aef5a.tar.gz",
-        "https://github.com/gflags/gflags/archive/77592648e3f3be87d6c7123eb81cbad75f9aef5a.tar.gz",
-    ],
+    remote = "https://github.com/gflags/gflags.git",
+    tag = "v2.2.2",
 )
 
 # ===== glog =====
-http_archive(
+git_repository(
     name = "com_github_glog_glog",
-    url = "https://github.com/google/glog/archive/v0.3.5.zip",
-    sha256 = "267103f8a1e9578978aa1dc256001e6529ef593e5aea38193d31c2872ee025e8",
-    strip_prefix = "glog-0.3.5",
-    build_file = "glog.BUILD",
+    remote = "https://github.com/google/glog.git",
+    tag = "v0.4.0",
 )
 
-# ===== protobuf =====
-# LICENSE: The Apache Software License, Version 2.0
+# ===== protobuf ===== (Everything below here is required by protobuf)
 # proto_library rules implicitly depend on @com_google_protobuf//:protoc
-#
-# There seem to be some problems with the most recent bazel version and
-# the protobuf libs, explained here.
-# https://github.com/tensorflow/tensorflow/issues/25000
-http_archive(
+git_repository(
     name = "com_google_protobuf",
-    strip_prefix = "protobuf-3.6.1.2",
-    urls = ["https://github.com/google/protobuf/archive/v3.6.1.2.tar.gz"],
-    sha256 = "2244b0308846bb22b4ff0bcc675e99290ff9f1115553ae9671eba1030af31bc0",
+    remote = "https://github.com/protocolbuffers/protobuf.git",
+    tag = "v3.12.3",
+)
+
+git_repository(
+    name = "bazel_skylib",
+    remote = "https://github.com/bazelbuild/bazel-skylib.git",
+    tag = "1.0.2",
+)
+
+git_repository(
+    name = "rules_python",
+    remote = "https://github.com/bazelbuild/rules_python.git",
+    tag = "0.0.2",
+)
+
+http_archive(
+    name = "zlib",
+    build_file = "@com_google_protobuf//:third_party/zlib.BUILD",
+    sha256 = "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1",
+    strip_prefix = "zlib-1.2.11",
+    urls = [
+        "https://mirror.bazel.build/zlib.net/zlib-1.2.11.tar.gz",
+        "https://zlib.net/zlib-1.2.11.tar.gz",
+    ],
 )

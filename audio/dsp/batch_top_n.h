@@ -319,7 +319,8 @@ class BatchTopN {
   int threshold_index_;
   int current_size_;  // Current number of elements in the buffer.
 
-  DISALLOW_COPY_AND_ASSIGN(BatchTopN);
+  BatchTopN(const BatchTopN&) = delete;
+  BatchTopN& operator=(const BatchTopN&) = delete;
 };
 
 namespace top_n_peaks_internal {
