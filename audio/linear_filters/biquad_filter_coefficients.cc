@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,23 +28,27 @@ using ::std::vector;
 
 namespace {
 
-bool TrivialFactor(const vector<double>& poly) {
-  return poly[1] == 0.0 && poly[2] == 0.0;
+bool IsFirstOrder(const vector<double>& poly) {
+  return std::abs(poly[2]) <= 1e-10 && std::abs(poly[1]) > 1e-10;
 }
 
-// Find first trivial a and b factors so they can be removed.
-bool FindTrivialFactors(const vector<BiquadFilterCoefficients>& coeffs,
-                        int* a_index, int* b_index, double* gain) {
+bool IsZeroOrder(const vector<double>& poly) {
+  return std::abs(poly[1]) <= 1e-10 && std::abs(poly[2]) <= 1e-10;
+}
+
+// Find a zero order set of poles and a zero order set of zeros to combine.
+bool FindZeroOrderPoly(const vector<BiquadFilterCoefficients>& coeffs,
+                       int* a_index, int* b_index, double* gain) {
   int n_stages = coeffs.size();
   *a_index = 0;
   *b_index = 0;
-  while (!TrivialFactor(coeffs[*a_index].a)) {
+  while (!IsZeroOrder(coeffs[*a_index].a)) {
     *a_index += 1;
     if (*a_index >= n_stages) {
       return false;
     }
   }
-  while (!TrivialFactor(coeffs[*b_index].b)) {
+  while (!IsZeroOrder(coeffs[*b_index].b)) {
     *b_index += 1;
     if (*b_index >= n_stages) {
       return false;
@@ -53,6 +57,30 @@ bool FindTrivialFactors(const vector<BiquadFilterCoefficients>& coeffs,
   *gain = coeffs[*b_index].b[0] / coeffs[*a_index].a[0];
   return true;
 }
+
+// Find pair of biquads that are both first order.
+bool FindPairOfFirstOrderBiquads(const vector<BiquadFilterCoefficients>& coeffs,
+                                 int* index, int* index2, bool use_A) {
+  auto pred = [&](const BiquadFilterCoefficients& biquad) {
+    if (use_A) {
+      return IsFirstOrder(biquad.a);
+    } else {
+      return IsFirstOrder(biquad.b);
+    }
+  };
+
+  *index = 0;
+  auto it = std::find_if(coeffs.begin(), coeffs.end(), pred);
+  if (it == coeffs.end()) { return false; }
+  *index = it - coeffs.begin();  // Found a first-order polynomial.
+
+  it = std::find_if(it + 1, coeffs.end(), pred);
+  if (it == coeffs.end()) { return false; }
+  *index2 = it - coeffs.begin();  // Found another one.
+
+  return true;
+}
+
 
 std::vector<double> Convolve(const vector<double>& x,
                              const vector<double>& y) {
@@ -352,7 +380,7 @@ double BiquadFilterCoefficients::EstimateDecayTime(double decay_db) const {
   return decay_db / decay_db_per_sample + 2.0;
 }
 
-string BiquadFilterCoefficients::ToString() const {
+std::string BiquadFilterCoefficients::ToString() const {
   return absl::StrCat("{{", absl::StrJoin(b, ", "),
                       "}, {",
                       absl::StrJoin(a, ", "), "}}");
@@ -377,10 +405,25 @@ bool BiquadFilterCascadeCoefficients::IsStable() const {
 
 // Squeeze out trivial stages; merge pole-only and zero-only stages together.
 void BiquadFilterCascadeCoefficients::Simplify() {
-  // Pair up trivial numerator/denominator and remove, unless only 1 stage.
+  // Combine first order polynomials, leaving behind a second and zero order
+  // polynomial.
+  int index, index2;
+  while (FindPairOfFirstOrderBiquads(coeffs, &index, &index2, false)) {
+    CHECK_NE(index, index2);
+    coeffs[index].b = Convolve(coeffs[index].b, coeffs[index2].b);
+    coeffs[index].b.resize(3);  // It could end up being size 1 or 2.
+    coeffs[index2].b = {1, 0, 0};
+  }
+  while (FindPairOfFirstOrderBiquads(coeffs, &index, &index2, true)) {
+    CHECK_NE(index, index2);
+    coeffs[index].a = Convolve(coeffs[index].a, coeffs[index2].a);
+    coeffs[index].a.resize(3);  // It could end up being size 1 or 2.
+    coeffs[index2].a = {1, 0, 0};
+  }
+  // Combine zero order polynomials.
   int a_index, b_index;
   double gain;
-  while (size() > 1 && FindTrivialFactors(coeffs, &a_index, &b_index, &gain)) {
+  while (size() > 1 && FindZeroOrderPoly(coeffs, &a_index, &b_index, &gain)) {
     if (a_index != b_index) {
       coeffs[b_index].b = coeffs[a_index].b;  // Merge nontrivial b to b_index.
     }
@@ -390,7 +433,6 @@ void BiquadFilterCascadeCoefficients::Simplify() {
       AdjustGain(gain);
     }
   }
-  // TODO -- Consider also merging first-order factors to quadratic.
 }
 
 void BiquadFilterCascadeCoefficients::AsPolynomialRatio(
@@ -423,8 +465,8 @@ std::pair<double, double>
   return FindPeakByBisection(EvaluateMagnitudeAtFrequency, 0, M_PI);
 }
 
-string BiquadFilterCascadeCoefficients::ToString() const {
-  auto formatter = [](string* out, const BiquadFilterCoefficients& coeff) {
+std::string BiquadFilterCascadeCoefficients::ToString() const {
+  auto formatter = [](std::string* out, const BiquadFilterCoefficients& coeff) {
     absl::StrAppend(out, coeff.ToString());
   };
   return absl::StrCat("{", absl::StrJoin(coeffs, ", ", formatter), "}");

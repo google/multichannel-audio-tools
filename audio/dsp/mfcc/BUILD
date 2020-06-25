@@ -25,7 +25,10 @@ cc_test(
     deps = [
         ":mfcc",
         "//audio/dsp:porting",
+        "//audio/dsp:signal_vector_util",
+        "@com_google_absl//absl/random",
         "@gtest//:gtest_main",
+
     ],
 )
 
@@ -47,6 +50,7 @@ cc_test(
     deps = [
         ":mfcc",
         "//audio/dsp:porting",
+        "//audio/dsp:signal_vector_util",
         "@com_github_glog_glog//:glog",
         "@gtest//:gtest_main",
     ],

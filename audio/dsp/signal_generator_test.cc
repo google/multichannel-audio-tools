@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ static constexpr float kNumSamples = 1000;
 
 // Get the name of Type as a string.
 template <typename Type>
-string GetTypeName() {
+std::string GetTypeName() {
   return util::Demangle(typeid(Type).name());
 }
 

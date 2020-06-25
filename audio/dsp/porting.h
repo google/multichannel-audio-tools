@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ typedef int64_t int64;
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;      \
   TypeName& operator=(const TypeName&) = delete
+
+#define ABSL_DIE_IF_NULL CHECK_NOTNULL
 
 
 template<typename T> struct MathLimits {

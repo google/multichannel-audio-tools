@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -305,9 +305,9 @@ TEST(NumberUtilTest, CombinationsIterator) {
 }
 
 TEST(NumberUtilTest, BuildCombinationsTable) {
-  vector<vector<string>> combinations = BuildCombinationsTable(
-      vector<string>({  "A", "B", "C", "D", "E"}), 3);
-  vector<string> joined_combinations;
+  vector<vector<std::string>> combinations =
+      BuildCombinationsTable(vector<std::string>({"A", "B", "C", "D", "E"}), 3);
+  vector<std::string> joined_combinations;
   for (const auto& combination : combinations) {
     joined_combinations.push_back(absl::StrJoin(combination, ""));
   }
@@ -358,113 +358,6 @@ TEST(NumberUtilTest, CrossProductRange) {
     }
     EXPECT_THAT(iterates, IsEmpty());
     EXPECT_TRUE(range.empty());
-  }
-}
-
-// RationalApproximation() should represent ratios of small integers exactly.
-TEST(NumberUtilTest, RationalApproximationOfSimpleRatios) {
-  for (int a = 1; a <= 12; ++a) {
-    for (int b = 1; b <= 12; ++b) {
-      const int gcd = GreatestCommonDivisor(a, b);
-      ASSERT_EQ(Fraction(a / gcd, b / gcd), RationalApproximation(
-          static_cast<double>(a) / b, 100)) << "where a/b = " << a << "/" << b;
-    }
-  }
-  // Negative rationals should work too.
-  ASSERT_EQ(Fraction(-11, 7), RationalApproximation(-11.0 / 7, 100));
-}
-
-// Rational approximation of sqrt(2) is interesting because all but the first
-// term of its continued fraction representation are even,
-//   sqrt(2) = [1; 2, 2, 2, ...],
-// giving many chances to check the special-case behavior with
-// n = continued_fraction_term / 2 semiconvergents.
-TEST(NumberUtilTest, RationalApproximationOfSqrt2) {
-  vector<Fraction> best_rational_approximations({
-        {1, 1},  // Convergent [1;].
-        {3, 2},  // Convergent [1; 2].
-        {4, 3},  // Semiconvergent between 1/1 and 3/2.
-        {7, 5},  // Convergent [1; 2, 2].
-        // Skip the apparent semiconvergent 10/7 between 3/2 and 7/5, which is
-        // not a best rational approximation since 7/5 is closer to sqrt(2).
-        {17, 12},  // Convergent [1; 2, 2, 2].
-        {24, 17},  // Semiconvergent between 7/5 and 17/12.
-        {41, 29},  // Convergent [1; 2, 2, 2, 2].
-        // Also skip the semiconvergent 65/46 between 24/17 and 41/29.
-        {99, 70}  // Convergent [1; 2, 2, 2, 2, 2].
-      });
-  int i = 0;
-  for (int max_denominator = 1; max_denominator <= 50; ++max_denominator) {
-    while (best_rational_approximations[i + 1].second <= max_denominator) {
-      ++i;
-    }
-    ASSERT_EQ(best_rational_approximations[i],
-              RationalApproximation(M_SQRT2, max_denominator))
-        << "where max_denominator = " << max_denominator;
-  }
-}
-
-// Test rational approximation of pi = [3; 7, 15, 1, 292, 1, ...].
-TEST(NumberUtilTest, RationalApproximationOfPi) {
-  vector<Fraction> best_rational_approximations({
-        {3, 1},  // Convergent [3;].
-        // Semiconvergents between "1/0" and 3/1.
-        {13, 4}, {16, 5}, {19, 6},
-        {22, 7},  // Convergent [3; 7].
-        // Semiconvergents between 19/6 and 22/7.
-        {179, 57}, {201, 64}, {223, 71}, {245, 78},
-        {267, 85}, {289, 92}, {311, 99},
-        {333, 106}  // Convergent [3; 7, 15].
-      });
-  int i = 0;
-  for (int max_denominator = 1; max_denominator <= 100; ++max_denominator) {
-    while (best_rational_approximations[i + 1].second <= max_denominator) {
-      ++i;
-    }
-    ASSERT_EQ(best_rational_approximations[i],
-              RationalApproximation(M_PI, max_denominator))
-        << "where max_denominator = " << max_denominator;
-  }
-}
-
-// The golden ratio (1 + sqrt(5))/2 = [1; 1, 1, 1, ...] is a particularly
-// difficult value to approximate by rationals [e.g. in the sense of Hurwitz's
-// theorem, https://en.wikipedia.org/wiki/Hurwitz%27s_theorem_(number_theory)].
-// Furthermore, it has no semiconvergents since all of its continued fraction
-// terms are one. The convergents are ratios of consecutive Fibonacci numbers.
-TEST(NumberUtilTest, RationalApproximationOfGoldenRatio) {
-  const double kGoldenRatio = (1.0 + std::sqrt(5.0)) / 2.0;
-  int fibonacci_prev = 1;
-  int fibonacci = 2;
-  for (int max_denominator = 1; max_denominator <= 100; ++max_denominator) {
-    while (fibonacci <= max_denominator) {
-      int fibonacci_next = fibonacci + fibonacci_prev;
-      fibonacci_prev = fibonacci;
-      fibonacci = fibonacci_next;
-    }
-    ASSERT_EQ(Fraction(fibonacci, fibonacci_prev),
-              RationalApproximation(kGoldenRatio, max_denominator))
-        << "where max_denominator = " << max_denominator;
-  }
-}
-
-// Check that RationalApproximation() produces best rational approximations.
-TEST(NumberUtilTest, RationalApproximationIsOptimal) {
-  constexpr int kNumTrials = 20;
-  std::mt19937 rng(0 /* seed */);
-  for (int max_denominator : {5, 10, 20}) {
-    SCOPED_TRACE(absl::StrFormat("max_denominator: %d", max_denominator));
-    for (int trial = 0; trial < kNumTrials; ++trial) {
-      const double value =
-          std::uniform_real_distribution<double>(-1.0, 1.0)(rng);
-      SCOPED_TRACE(absl::StrFormat("value: %g", value));
-      Fraction rational = RationalApproximation(value, max_denominator);
-      ASSERT_LE(rational.second, max_denominator);
-      ASSERT_EQ(1, GreatestCommonDivisor(
-          std::abs(rational.first), rational.second));
-      ASSERT_EQ(ExhaustiveFindBestRationalApproximation(
-          value, max_denominator), rational);
-    }
   }
 }
 

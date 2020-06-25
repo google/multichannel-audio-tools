@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,15 +75,13 @@ FilterPolesAndZeros ShiftRootsFromBaseband(double new_center_frequency,
     mapped_filter.AddConjugatePolePair(pole - std::sqrt(pole_sq_minus_f_sq));
   }
   for (double zero : filter->GetRealZeros()) {
-    std::complex<double> pole_sq_minus_f_sq =
-        zero * zero - center_sq;
-    mapped_filter.AddConjugatePolePair(zero + std::sqrt(pole_sq_minus_f_sq));
+    std::complex<double> zero_sq_minus_f_sq = zero * zero - center_sq;
+    mapped_filter.AddConjugateZeroPair(zero + std::sqrt(zero_sq_minus_f_sq));
   }
   for (const std::complex<double>& zero : filter->GetConjugatedZeros()) {
-    std::complex<double> pole_sq_minus_f_sq =
-        zero * zero - center_sq;
-    mapped_filter.AddConjugatePolePair(zero + std::sqrt(pole_sq_minus_f_sq));
-    mapped_filter.AddConjugatePolePair(zero - std::sqrt(pole_sq_minus_f_sq));
+    std::complex<double> zero_sq_minus_f_sq = zero * zero - center_sq;
+    mapped_filter.AddConjugateZeroPair(zero + std::sqrt(zero_sq_minus_f_sq));
+    mapped_filter.AddConjugateZeroPair(zero - std::sqrt(zero_sq_minus_f_sq));
   }
   mapped_filter.SetGain(filter->GetGain());
   return mapped_filter;

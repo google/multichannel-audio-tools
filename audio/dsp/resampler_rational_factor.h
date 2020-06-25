@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@
 
 #ifndef AUDIO_DSP_RESAMPLER_RATIONAL_FACTOR_H_
 #define AUDIO_DSP_RESAMPLER_RATIONAL_FACTOR_H_
+
+#include <type_traits>
 
 #include "audio/dsp/number_util.h"
 #include "audio/dsp/resampler.h"
@@ -171,6 +173,9 @@ class DefaultResamplingKernel: public ResamplingKernel {
 template <typename ValueType>
 class RationalFactorResampler: public Resampler<ValueType> {
  public:
+  static_assert(
+      std::is_floating_point<typename RealType<ValueType>::Type>::value,
+      "ValueType must be a floating point or complex type");
   // Construct a RationalFactorResampler where the resampling factor is obtained
   // from kernel. The resampling factor input_sample_rate / output_sample_rate
   // is approximated by a rational factor a/b where 0 < b <= max_denominator.

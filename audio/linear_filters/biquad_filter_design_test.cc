@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -513,23 +513,24 @@ TEST(BiquadFilterDesignTest, AllpassCoefficientsTest) {
                                           10000, kSampleRateHz));
 }
 
-string ToString(const complex<double>& value) {
-  return absl::StrFormat("%g+%gj", value.real(), value.imag());
+std::string ToString(const complex<double>& value) {
+  return absl::StrFormat("%.12g+%.12gj", value.real(), value.imag());
 }
 
-// TODO: Replace this with a matcher once there is a tolerance that
-// works well for all of the tests.
-void AssertRootNear(std::complex<double> actual,
-                    std::complex<double> expected,
-                    double tol = 1e-6) {
-  SCOPED_TRACE("Found root " + ToString(actual) + " but was expecting " +
-               ToString(expected) + ".");
-  ASSERT_NEAR(actual.real(), expected.real(), tol);
-  ASSERT_NEAR(actual.imag(), expected.imag(), tol);
+// Check that a complex value is within 1e-9 of expected value.
+MATCHER_P(ComplexNear, expected, "is near " + ToString(expected)) {
+  constexpr double kTol = 1e-9;
+  std::complex<double> error = arg - expected;
+  return std::abs(std::real(error)) < kTol && std::abs(std::imag(error)) < kTol;
+}
+
+ComplexNearMatcherP<std::complex<double>> ComplexNear(
+    double expected_real, double expected_imag) {
+  return ComplexNear(std::complex<double>(expected_real, expected_imag));
 }
 
 TEST(PoleZeroFilterDesignTest, ButterworthAnalogPrototype) {
-  // Compare with scipy.signal.cheby1(n, 0.25, 1, analog=True, output="zpk").
+  // Compare with scipy.signal.butter(n, 1, analog=True, output="zpk").
   // First order.
   FilterPolesAndZeros zpk1 = ButterworthFilterDesign(1).GetAnalogPrototype();
   EXPECT_EQ(zpk1.GetPolesDegree(), 1);
@@ -541,27 +542,27 @@ TEST(PoleZeroFilterDesignTest, ButterworthAnalogPrototype) {
   EXPECT_EQ(zpk2.GetPolesDegree(), 2);
   EXPECT_EQ(zpk2.GetZerosDegree(), 0);
   EXPECT_NEAR(zpk2.GetGain(), 1, 1e-9);
-  AssertRootNear(zpk2.GetConjugatedPoles()[0],
-                 {-0.707106781187, 0.707106781187});
+  EXPECT_THAT(zpk2.GetConjugatedPoles()[0],
+              ComplexNear(-0.707106781187, 0.707106781187));
   // Third order.
   FilterPolesAndZeros zpk3 = ButterworthFilterDesign(3).GetAnalogPrototype();
   EXPECT_EQ(zpk3.GetPolesDegree(), 3);
   EXPECT_EQ(zpk3.GetZerosDegree(), 0);
   EXPECT_NEAR(zpk3.GetGain(), 1, 1e-9);
   EXPECT_EQ(zpk3.GetRealPoles()[0], -1.0);
-  AssertRootNear(zpk3.GetConjugatedPoles()[0], {-0.5, 0.866025403784});
+  EXPECT_THAT(zpk3.GetConjugatedPoles()[0], ComplexNear(-0.5, 0.866025403784));
   // Seventh order.
   FilterPolesAndZeros zpk7 = ButterworthFilterDesign(7).GetAnalogPrototype();
   EXPECT_EQ(zpk7.GetPolesDegree(), 7);
   EXPECT_EQ(zpk7.GetZerosDegree(), 0);
   EXPECT_NEAR(zpk7.GetGain(), 1.0, 1e-9);
   EXPECT_EQ(zpk7.GetRealPoles()[0], -1.0);
-  AssertRootNear(zpk7.GetConjugatedPoles()[0],
-                 {-0.900968867902, 0.433883739118});
-  AssertRootNear(zpk7.GetConjugatedPoles()[1],
-                 {-0.623489801859, 0.781831482468});
-  AssertRootNear(zpk7.GetConjugatedPoles()[2],
-                 {-0.222520933956, 0.974927912182});
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[0],
+              ComplexNear(-0.900968867902, 0.433883739118));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[1],
+              ComplexNear(-0.623489801859, 0.781831482468));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[2],
+              ComplexNear(-0.222520933956, 0.974927912182));
 }
 
 TEST(PoleZeroFilterDesignTest, Chebyshev1AnalogPrototype) {
@@ -571,38 +572,39 @@ TEST(PoleZeroFilterDesignTest, Chebyshev1AnalogPrototype) {
       ChebyshevType1FilterDesign(1, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk1.GetPolesDegree(), 1);
   EXPECT_EQ(zpk1.GetZerosDegree(), 0);
-  EXPECT_NEAR(zpk1.GetGain(), 4.1081110, 1e-6);
-  EXPECT_NEAR(zpk1.GetRealPoles()[0], -4.10811100915, 1e-6);
+  EXPECT_NEAR(zpk1.GetRealPoles()[0], -4.108111009150, 1e-9);
+  EXPECT_NEAR(zpk1.GetGain(), 4.108111009150, 1e-9);
   // Second order.
   FilterPolesAndZeros zpk2 =
       ChebyshevType1FilterDesign(2, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk2.GetPolesDegree(), 2);
   EXPECT_EQ(zpk2.GetZerosDegree(), 0);
-  EXPECT_NEAR(zpk2.GetGain(), 2.054055504, 1e-6);
-  AssertRootNear(zpk2.GetConjugatedPoles()[0],
-                 {-0.898341529763, 1.14324866241});
+  EXPECT_THAT(zpk2.GetConjugatedPoles()[0],
+              ComplexNear(-0.898341529763, 1.14324866241));
+  EXPECT_NEAR(zpk2.GetGain(), 2.054055504575, 1e-9);
   // Third order.
   FilterPolesAndZeros zpk3 =
       ChebyshevType1FilterDesign(3, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk3.GetPolesDegree(), 3);
   EXPECT_EQ(zpk3.GetZerosDegree(), 0);
-  EXPECT_NEAR(zpk3.GetRealPoles()[0], -0.767222665927, 1e-6);
-  EXPECT_NEAR(zpk3.GetGain(), 1.02702775228, 1e-6);
-  AssertRootNear(zpk3.GetConjugatedPoles()[0],
-                 {-0.383611332964, 1.09154613477});
+  EXPECT_NEAR(zpk3.GetRealPoles()[0], -0.767222665927, 1e-9);
+  EXPECT_THAT(zpk3.GetConjugatedPoles()[0],
+              ComplexNear(-0.383611332964, 1.09154613477));
+  EXPECT_NEAR(zpk3.GetGain(), 1.027027752287, 1e-9);
+
   // Seventh order.
   FilterPolesAndZeros zpk7 =
       ChebyshevType1FilterDesign(7, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk7.GetPolesDegree(), 7);
   EXPECT_EQ(zpk7.GetZerosDegree(), 0);
-  EXPECT_NEAR(zpk7.GetRealPoles()[0], -0.307598675776, 1e-6);
-  EXPECT_NEAR(zpk7.GetGain(), 0.0641892345179, 1e-6);
-  AssertRootNear(zpk7.GetConjugatedPoles()[0],
-                 {-0.0684471446174, 1.02000802334});
-  AssertRootNear(zpk7.GetConjugatedPoles()[1],
-                 {-0.191784637412, 0.817982924742});
-  AssertRootNear(zpk7.GetConjugatedPoles()[2],
-                 {-0.277136830682, 0.453946275994});
+  EXPECT_NEAR(zpk7.GetRealPoles()[0], -0.307598675776, 1e-9);
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[0],
+              ComplexNear(-0.0684471446174, 1.02000802334));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[1],
+              ComplexNear(-0.191784637412, 0.817982924742));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[2],
+              ComplexNear(-0.277136830682, 0.453946275994));
+  EXPECT_NEAR(zpk7.GetGain(), 0.0641892345179, 1e-9);
 }
 
 TEST(PoleZeroFilterDesignTest, Chebyshev2AnalogPrototype) {
@@ -612,88 +614,113 @@ TEST(PoleZeroFilterDesignTest, Chebyshev2AnalogPrototype) {
       ChebyshevType2FilterDesign(1, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk1.GetPolesDegree(), 1);
   EXPECT_EQ(zpk1.GetZerosDegree(), 0);
-  EXPECT_NEAR(zpk1.GetGain(), 4.10811100915, 1e-6);
-  EXPECT_NEAR(zpk1.GetRealPoles()[0], -4.10811100915, 1e-6);
+  EXPECT_NEAR(zpk1.GetRealPoles()[0], -4.10811100915, 1e-9);
+  EXPECT_NEAR(zpk1.GetGain(), 4.10811100915, 1e-9);
   // Second order.
   FilterPolesAndZeros zpk2 =
       ChebyshevType2FilterDesign(2, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk2.GetPolesDegree(), 2);
   EXPECT_EQ(zpk2.GetZerosDegree(), 2);
-  EXPECT_NEAR(zpk2.GetGain(), 0.971627951577, 1e-6);
-  AssertRootNear(zpk2.GetConjugatedZeros()[0], {0, 1.41421356});
-  AssertRootNear(zpk2.GetConjugatedPoles()[0],
-                 {-0.16603335596, 1.38408411156});
+  EXPECT_THAT(zpk2.GetConjugatedZeros()[0], ComplexNear(0, 1.414213562373));
+  EXPECT_THAT(zpk2.GetConjugatedPoles()[0],
+              ComplexNear(-0.16603335596, 1.38408411156));
+  EXPECT_NEAR(zpk2.GetGain(), 0.971627951577, 1e-9);
   // Third order.
   FilterPolesAndZeros zpk3 =
       ChebyshevType2FilterDesign(3, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk3.GetPolesDegree(), 3);
-  EXPECT_NEAR(zpk3.GetRealPoles()[0], -12.4306769322, 1e-6);
-  EXPECT_NEAR(zpk3.GetGain(), 12.3243330274, 1e-6);
-  AssertRootNear(zpk3.GetConjugatedZeros()[0], {0, 1.15470054});
-  AssertRootNear(zpk3.GetConjugatedPoles()[0],
-                 {-0.0531719523966, 1.14852055605});
+  EXPECT_NEAR(zpk3.GetRealPoles()[0], -12.4306769322, 1e-9);
+  EXPECT_THAT(zpk3.GetConjugatedZeros()[0], ComplexNear(0, 1.154700538379));
+  EXPECT_THAT(zpk3.GetConjugatedPoles()[0],
+              ComplexNear(-0.0531719523966, 1.14852055605));
+  EXPECT_NEAR(zpk3.GetGain(), 12.3243330274, 1e-9);
   // Seventh order.
   FilterPolesAndZeros zpk7 =
       ChebyshevType2FilterDesign(7, 0.25).GetAnalogPrototype();
   EXPECT_EQ(zpk7.GetPolesDegree(), 7);
-  EXPECT_NEAR(zpk7.GetRealPoles()[0], -29.0304010997, 1e-6);
-  EXPECT_NEAR(zpk7.GetGain(), 28.756777064, 1e-6);
-  AssertRootNear(zpk7.GetConjugatedZeros()[0], {-0, 1.02571686});
-  AssertRootNear(zpk7.GetConjugatedZeros()[1], {-0, 1.27904801});
-  AssertRootNear(zpk7.GetConjugatedZeros()[2], {-0, 2.30476487});
-  AssertRootNear(zpk7.GetConjugatedPoles()[0],
-                 {-0.00805435931033, 1.02504557345});
-  AssertRootNear(zpk7.GetConjugatedPoles()[1],
-                 {-0.0350677400886, 1.27732709156});
-  AssertRootNear(zpk7.GetConjugatedPoles()[2],
-                 {-0.163825398625, 2.29168734868});
+  EXPECT_NEAR(zpk7.GetRealPoles()[0], -29.0304010997, 1e-9);
+  EXPECT_THAT(zpk7.GetConjugatedZeros()[0], ComplexNear(0, 1.025716863273));
+  EXPECT_THAT(zpk7.GetConjugatedZeros()[1], ComplexNear(0, 1.279048007690));
+  EXPECT_THAT(zpk7.GetConjugatedZeros()[2], ComplexNear(0, 2.304764870962));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[0],
+              ComplexNear(-0.00805435931033, 1.02504557345));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[1],
+              ComplexNear(-0.0350677400886, 1.27732709156));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[2],
+              ComplexNear(-0.163825398625, 2.29168734868));
+  EXPECT_NEAR(zpk7.GetGain(), 28.756777064, 1e-9);
 }
 
-// TODO: A lot of these tolerances had to be loosened to pass.
-// It's not clear why.
+// Test elliptic filter analog prototype.
+//
+// NOTE: We don't compare with scipy.signal.ellip. Its results are accurate to
+// only ~4 digits because it does some steps as numeric root finding with a
+// hard-coded stopping tolerance of 1e-4. Mathematica's implementation on the
+// other hand can execute with arbitrarily high precision.
 TEST(PoleZeroFilterDesignTest, EllipticAnalogPrototype) {
-  // Compare with scipy.signal.cheby2(n, 0.25, 0.35, 1,
-  //                                  analog=True, output="zpk").
-  // First order.
+  // First order. Compare with Mathematica:
+  //   tf = N[EllipticFilterModel[{"Lowpass", {1, 10}, {1/2, 10}}], 24];
   FilterPolesAndZeros zpk1 =
-      EllipticFilterDesign(1, 0.25, 0.35).GetAnalogPrototype();
-  EXPECT_EQ(zpk1.GetPolesDegree(), 1);
+      EllipticFilterDesign(1, 0.5, 10).GetAnalogPrototype();
   EXPECT_EQ(zpk1.GetZerosDegree(), 0);
-  EXPECT_NEAR(zpk1.GetGain(), 4.10811101, 1e-6);
-  EXPECT_NEAR(zpk1.GetRealPoles()[0], -4.10811100914, 1e-6);
-  // Second order.
+  EXPECT_EQ(zpk1.GetPolesDegree(), 1);
+  EXPECT_NEAR(zpk1.GetRealPoles()[0], -2.862775161243, 1e-9);
+  EXPECT_NEAR(zpk1.GetGain(), 2.862775161243, 1e-9);
+
+  // Second order. Compare with Mathematica:
+  //   tf = N[EllipticFilterModel[{"Lowpass", {1, 10}, {1/2, 40}}], 24];
   FilterPolesAndZeros zpk2 =
-      EllipticFilterDesign(2, 0.25, 0.35).GetAnalogPrototype();
-  EXPECT_EQ(zpk2.GetPolesDegree(), 2);
+      EllipticFilterDesign(2, 0.5, 40).GetAnalogPrototype();
   EXPECT_EQ(zpk2.GetZerosDegree(), 2);
-  EXPECT_NEAR(zpk2.GetGain(), 0.960513960388, 1e-5);
-  AssertRootNear(zpk2.GetConjugatedZeros()[0], {0, 1.04644836}, 1e-5);
-  AssertRootNear(zpk2.GetConjugatedPoles()[0],
-                 {-0.02246578, 1.04020366}, 1e-5);
-  // Third order.
+  EXPECT_EQ(zpk2.GetPolesDegree(), 2);
+  EXPECT_THAT(zpk2.GetConjugatedZeros()[0], ComplexNear(0, 11.984640209256));
+  EXPECT_THAT(zpk2.GetConjugatedPoles()[0],
+              ComplexNear(-0.709000512616, 1.009327180183));
+  EXPECT_NEAR(zpk2.GetGain(), 0.01, 1e-9);
+
+  // Third order. Compare with Mathematica:
+  //   tf = N[EllipticFilterModel[{"Lowpass", {1, 3}, {1/2, 40}}], 24];
   FilterPolesAndZeros zpk3 =
-      EllipticFilterDesign(3, 0.25, 0.35).GetAnalogPrototype();
+      EllipticFilterDesign(3, 0.5, 40).GetAnalogPrototype();
+  EXPECT_EQ(zpk3.GetZerosDegree(), 2);
   EXPECT_EQ(zpk3.GetPolesDegree(), 3);
-  EXPECT_NEAR(zpk3.GetRealPoles()[0], -3.75707890, 3e-3);
-  EXPECT_NEAR(zpk3.GetGain(), 3.7561382314, 3e-3);
-  AssertRootNear(zpk3.GetConjugatedZeros()[0], {0, 1.00098779});
-  AssertRootNear(zpk3.GetConjugatedPoles()[0],
-                 {-4.70332379e-04, 1.00086237});
-  // Seventh order.
+  EXPECT_THAT(zpk3.GetConjugatedZeros()[0], ComplexNear(0, 3.103097653306));
+  EXPECT_NEAR(zpk3.GetRealPoles()[0], -0.659093088080, 1e-9);
+  EXPECT_THAT(zpk3.GetConjugatedPoles()[0],
+              ComplexNear(-0.290319112981, 1.030497104301));
+  EXPECT_NEAR(zpk3.GetGain(), 0.078454862117, 1e-9);
+
+  // Fourth order. Compare with Mathematica:
+  //   tf = N[EllipticFilterModel[{"Lowpass", {1, 2}, {1/2, 40}}], 24];
+  FilterPolesAndZeros zpk4 =
+      EllipticFilterDesign(4, 0.5, 40).GetAnalogPrototype();
+  EXPECT_EQ(zpk4.GetZerosDegree(), 4);
+  EXPECT_EQ(zpk4.GetPolesDegree(), 4);
+  EXPECT_THAT(zpk4.GetConjugatedZeros()[0], ComplexNear(0, 1.734663423950));
+  EXPECT_THAT(zpk4.GetConjugatedZeros()[1], ComplexNear(0, 3.861380228415));
+  EXPECT_THAT(zpk4.GetConjugatedPoles()[0],
+              ComplexNear(-0.135958718125, 1.021219506553));
+  EXPECT_THAT(zpk4.GetConjugatedPoles()[1],
+              ComplexNear(-0.453528561667, 0.492009877225));
+  EXPECT_NEAR(zpk4.GetGain(), 0.01, 1e-9);
+
+  // Seventh order. Compare with Mathematica:
+  //   tf = N[EllipticFilterModel[{"Lowpass", {1, 11/10}, {1/2, 40}}], 24];
   FilterPolesAndZeros zpk7 =
-      EllipticFilterDesign(7, 0.25, 0.35).GetAnalogPrototype();
+      EllipticFilterDesign(7, 0.5, 40).GetAnalogPrototype();
+  EXPECT_EQ(zpk7.GetZerosDegree(), 6);
   EXPECT_EQ(zpk7.GetPolesDegree(), 7);
-  EXPECT_NEAR(zpk7.GetRealPoles()[0], -3.75516861, 5e-3);
-  EXPECT_NEAR(zpk7.GetGain(), 3.754227606, 5e-3);
-  AssertRootNear(zpk7.GetConjugatedZeros()[0], {-0, 1.00098779}, 1e-3);
-  AssertRootNear(zpk7.GetConjugatedZeros()[1], {-0, 1.00000045}, 1e-3);
-  AssertRootNear(zpk7.GetConjugatedZeros()[2], {-0, 1.0}, 1e-3);
-  AssertRootNear(zpk7.GetConjugatedPoles()[0],
-                 {-1.05115740e-10, 1});
-  AssertRootNear(zpk7.GetConjugatedPoles()[1],
-                 {-2.22403043e-07, 1.00000039});
-  AssertRootNear(zpk7.GetConjugatedPoles()[2],
-                 {-4.70721817e-04, 1.0008207});
+  EXPECT_THAT(zpk7.GetConjugatedZeros()[0], ComplexNear(0, 1.069178406340));
+  EXPECT_THAT(zpk7.GetConjugatedZeros()[1], ComplexNear(0, 1.165240166429));
+  EXPECT_THAT(zpk7.GetConjugatedZeros()[2], ComplexNear(0, 1.704070901857));
+  EXPECT_NEAR(zpk7.GetRealPoles()[0], -0.430200300943, 1e-9);
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[0],
+                 ComplexNear(-0.016074016029, 1.003360790160));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[1],
+                 ComplexNear(-0.080307772790, 0.941380150432));
+  EXPECT_THAT(zpk7.GetConjugatedPoles()[2],
+                 ComplexNear(-0.256233622857, 0.687630058081));
+  EXPECT_NEAR(zpk7.GetGain(), 0.046200568751, 1e-9);
 }
 
 // These tests are more thorough than the typed tests below.
@@ -796,7 +823,8 @@ TEST(PoleZeroFilterDesignTest, ButterworthBandstopCoefficientsTest) {
   }
 }
 
-static constexpr float kRippleDb = 0.25;
+static constexpr float kPassbandRippleDb = 0.25;
+static constexpr float kStopbandRippleDb = 25.0;
 static constexpr float kRippleToleranceLinear = 0.35;
 static constexpr int kOrder = 4;
 
@@ -809,44 +837,40 @@ class ButterworthDefinedFilterDesign : public ButterworthFilterDesign  {
 class ChebyshevType1DefinedFilterDesign : public ChebyshevType1FilterDesign  {
  public:
   ChebyshevType1DefinedFilterDesign()
-      : ChebyshevType1FilterDesign(kOrder, kRippleDb) {}
+      : ChebyshevType1FilterDesign(kOrder, kPassbandRippleDb) {}
 };
 
 class ChebyshevType2DefinedFilterDesign : public ChebyshevType2FilterDesign  {
  public:
   ChebyshevType2DefinedFilterDesign()
-      : ChebyshevType2FilterDesign(kOrder, kRippleDb) {}
+      : ChebyshevType2FilterDesign(kOrder, kStopbandRippleDb) {}
 };
 
 class EllipticDefinedFilterDesign : public EllipticFilterDesign  {
  public:
   EllipticDefinedFilterDesign()
-      : EllipticFilterDesign(kOrder, kRippleDb, kRippleDb) {}
+      : EllipticFilterDesign(kOrder, kPassbandRippleDb, kStopbandRippleDb) {}
 };
 
 template <typename TypeParam>
 class PoleZeroFilterDesignTypedTest : public ::testing::Test {};
 
 typedef ::testing::Types<
-    ButterworthDefinedFilterDesign
-// TODO: Enable these once we've looked into the numerical problems.
-//     ChebyshevType1DefinedFilterDesign,
-//     ChebyshevType2DefinedFilterDesign,
-//     EllipticDefinedFilterDesign
+    ButterworthDefinedFilterDesign,
+    ChebyshevType1DefinedFilterDesign,
+    ChebyshevType2DefinedFilterDesign,
+    EllipticDefinedFilterDesign
     > TestTypes;
 TYPED_TEST_SUITE(PoleZeroFilterDesignTypedTest, TestTypes);
 
 constexpr float kTransitionFactor = 3;
 
 TYPED_TEST(PoleZeroFilterDesignTypedTest, LowpassBasicTest) {
-  constexpr double kTolerance = 1e-4;
   constexpr float kCornerFrequency = 1000.0f;
   BiquadFilterCascadeCoefficients coeffs =
       TypeParam().LowpassCoefficients(kSampleRateHz, kCornerFrequency);
   ASSERT_THAT(coeffs, MagnitudeResponseIs(
       DoubleNear(1.0, kRippleToleranceLinear), 0.0f, kSampleRateHz));
-  ASSERT_THAT(coeffs, MagnitudeResponseIs(
-      DoubleNear(1 / M_SQRT2, kTolerance), kCornerFrequency, kSampleRateHz));
   ASSERT_THAT(coeffs, MagnitudeResponseIs(
       DoubleNear(0.0, kRippleToleranceLinear), kNyquistHz, kSampleRateHz));
   // Test that response is less than kRippleToleranceLinear above the
@@ -862,14 +886,11 @@ TYPED_TEST(PoleZeroFilterDesignTypedTest, LowpassBasicTest) {
 }
 
 TYPED_TEST(PoleZeroFilterDesignTypedTest, HighpassBasicTest) {
-  constexpr double kTolerance = 1e-4;
   constexpr float kCornerFrequency = 1000.0f;
   BiquadFilterCascadeCoefficients coeffs =
       TypeParam().HighpassCoefficients(kSampleRateHz, kCornerFrequency);
   ASSERT_THAT(coeffs, MagnitudeResponseIs(
       DoubleNear(0.0, kRippleToleranceLinear), 0.0f, kSampleRateHz));
-  ASSERT_THAT(coeffs, MagnitudeResponseIs(
-      DoubleNear(1 / M_SQRT2, kTolerance), kCornerFrequency, kSampleRateHz));
   ASSERT_THAT(coeffs, MagnitudeResponseIs(
       DoubleNear(1.0, kRippleToleranceLinear), kNyquistHz, kSampleRateHz));
   // Test that response is less than kRippleToleranceLinear below the
@@ -887,9 +908,7 @@ TYPED_TEST(PoleZeroFilterDesignTypedTest, HighpassBasicTest) {
 TYPED_TEST(PoleZeroFilterDesignTypedTest, BandpassBasicTest) {
   constexpr float kLowFrequency = 1000.0f;
   constexpr float kHighFrequency = 3000.0f;
-
-  const float center_frequency_hz =
-      std::sqrt(kLowFrequency * kHighFrequency);
+  const float center_frequency_hz = std::sqrt(kLowFrequency * kHighFrequency);
   BiquadFilterCascadeCoefficients coeffs = TypeParam().BandpassCoefficients(
       kSampleRateHz, kLowFrequency, kHighFrequency);
   ASSERT_THAT(coeffs,
@@ -908,8 +927,7 @@ TYPED_TEST(PoleZeroFilterDesignTypedTest, BandpassBasicTest) {
 TYPED_TEST(PoleZeroFilterDesignTypedTest, BandstopBasicTest) {
   constexpr float kLowFrequency = 1000.0f;
   constexpr float kHighFrequency = 3000.0f;
-  const float center_frequency_hz =
-      std::sqrt(kLowFrequency * kHighFrequency);
+  const float center_frequency_hz = std::sqrt(kLowFrequency * kHighFrequency);
   BiquadFilterCascadeCoefficients coeffs = TypeParam().BandstopCoefficients(
       kSampleRateHz, kLowFrequency, kHighFrequency);
   ASSERT_THAT(coeffs,

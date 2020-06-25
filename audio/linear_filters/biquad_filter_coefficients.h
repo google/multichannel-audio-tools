@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,7 +146,7 @@ struct BiquadFilterCoefficients {
     }
   }
 
-  string ToString() const;
+  std::string ToString() const;
 
   std::vector<double> b;
   std::vector<double> a;
@@ -277,7 +277,7 @@ struct BiquadFilterCascadeCoefficients {
 
   size_t size() const { return coeffs.size(); }
 
-  string ToString() const;
+  std::string ToString() const;
 
   std::vector<BiquadFilterCoefficients> coeffs;
 };

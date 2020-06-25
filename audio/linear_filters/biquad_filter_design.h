@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@
 // There are also design functions for several of the popular filter types:
 // Butterworth, Chebyshev (Type I & II), and elliptic filters, each with
 // the lowpass, highpass, bandpass and bandstop variants.
-// NOTE: Only the Butterworth filter is ready for use at this time.
-// TODO: Remove this note once the numerical issues are resolved.
 
 
 #ifndef AUDIO_LINEAR_FILTERS_BIQUAD_FILTER_DESIGN_H_
@@ -293,10 +291,7 @@ class ChebyshevType1FilterDesign: public PoleZeroFilterDesign {
  public:
   ChebyshevType1FilterDesign(int order, double passband_ripple_db)
       : order_(order),
-        passband_ripple_db_(passband_ripple_db) {
-    LOG(WARNING) << "The current Chebyshev Type I filter implementation has "
-        "numerical problems and is not ready to use (see b/36158929).";
-  }
+        passband_ripple_db_(passband_ripple_db) {}
 
   FilterPolesAndZeros GetAnalogPrototype() const override;
 
@@ -308,14 +303,14 @@ class ChebyshevType1FilterDesign: public PoleZeroFilterDesign {
 // Chebyshev type 2 filters have the property that they minimize the error
 // between the ideal and actual filter at the expense of having equiripple
 // behavior in the stopband.
+//
+// The `stopband_ripple_db` parameter is the stopband attenuation, for instance
+// stopband_ripple_db = 40.0 for a stopband below -40dB.
 class ChebyshevType2FilterDesign: public PoleZeroFilterDesign {
  public:
   ChebyshevType2FilterDesign(int order, double stopband_ripple_db)
       : order_(order),
-        stopband_ripple_db_(stopband_ripple_db) {
-    LOG(WARNING) << "The current Chebyshev Type II filter implementation has "
-        "numerical problems and is not ready to use (see b/36158929).";
-  }
+        stopband_ripple_db_(stopband_ripple_db) {}
 
   FilterPolesAndZeros GetAnalogPrototype() const override;
 
@@ -326,6 +321,9 @@ class ChebyshevType2FilterDesign: public PoleZeroFilterDesign {
 
 // Elliptic (a.k.a. Cauer or Zolotarev) filter, having equiripple in both the
 // passband and stopband with a maximally steep rolloff.
+//
+// The `stopband_ripple_db` parameter is the stopband attenuation, for instance
+// stopband_ripple_db = 40.0 for a stopband below -40dB.
 class EllipticFilterDesign: public PoleZeroFilterDesign {
  public:
   EllipticFilterDesign(int order, double passband_ripple_db,
@@ -333,8 +331,7 @@ class EllipticFilterDesign: public PoleZeroFilterDesign {
       : order_(order),
         passband_ripple_db_(passband_ripple_db),
         stopband_ripple_db_(stopband_ripple_db) {
-    LOG(WARNING) << "The current elliptic filter implementation has numerical "
-                    "problems and is not ready to use (see b/36158929).";
+    CHECK_LT(passband_ripple_db, stopband_ripple_db);
   }
   FilterPolesAndZeros GetAnalogPrototype() const override;
 

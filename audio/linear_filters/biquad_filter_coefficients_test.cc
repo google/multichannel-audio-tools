@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -208,6 +208,68 @@ TEST(BiquadFilterCascadeCoefficientsTest, AsPolynomialRatioTest) {
   coeffs.AsPolynomialRatio(&b, &a);
   EXPECT_THAT(b, testing::ElementsAre(4.0, 12.0, 24.0, 24.0, 20.0, 12.0));
   EXPECT_THAT(a, testing::ElementsAre(2.0, 6.0, 10.0, 6.0));
+}
+
+TEST(BiquadFilterCascadeCoefficientsTest, SimplifyTrivialTest) {
+  BiquadFilterCascadeCoefficients coeffs;
+  {
+    vector<double> b;
+    vector<double> a;
+    coeffs.AppendNumerator({1, 2, 3});
+    coeffs.AsPolynomialRatio(&b, &a);
+    EXPECT_THAT(b, testing::ElementsAre(1.0, 2.0, 3.0));
+    EXPECT_THAT(a, testing::ElementsAre(1.0));
+  }
+  {
+    // Polynomials with trivial numerators and denominators get combined.
+    vector<double> b;
+    vector<double> a;
+    coeffs.AppendDenominator({1, 3, 1});
+    coeffs.AsPolynomialRatio(&b, &a);
+    EXPECT_THAT(b, testing::ElementsAre(1.0, 2.0, 3.0));
+    EXPECT_THAT(a, testing::ElementsAre(1.0, 3.0, 1.0));
+  }
+}
+
+TEST(BiquadFilterCascadeCoefficientsTest, FirstOrderTrivialTest) {
+  {
+    BiquadFilterCascadeCoefficients coeffs;
+    // Polynomials with trivial numerators and denominators get combined.
+    vector<double> b;
+    vector<double> a;
+    coeffs.AppendBiquad({{1, 2, 0}, {2, 2, 0}});
+    coeffs.AppendBiquad({{1, 3, 0}, {7, 5, 0}});
+    coeffs.AsPolynomialRatio(&b, &a);
+    EXPECT_EQ(coeffs.size(), 1);  // They get merged into a single biquad.
+    EXPECT_THAT(b, testing::ElementsAre(1.0, 5.0, 6.0));
+    EXPECT_THAT(a, testing::ElementsAre(14.0, 24.0, 10.0));
+  }
+  {
+    BiquadFilterCascadeCoefficients coeffs;
+    // Polynomials with trivial numerators and denominators get combined.
+    vector<double> b;
+    vector<double> a;
+    coeffs.AppendBiquad({{1, 2, 0}, {2, 2, 0}});
+    coeffs.AppendBiquad({{1, 2, 1}, {2, 2, 1}});
+    coeffs.AppendBiquad({{1, 3, 0}, {7, 5, 0}});
+    EXPECT_EQ(coeffs.size(), 2);  // They get merged into a single biquad.
+    EXPECT_THAT(coeffs[0].b, testing::ElementsAre(1.0, 5.0, 6.0));
+    EXPECT_THAT(coeffs[0].a, testing::ElementsAre(14.0, 24.0, 10.0));
+  }
+  {
+    BiquadFilterCascadeCoefficients coeffs;
+    // Polynomials with trivial numerators and denominators get combined.
+    vector<double> b;
+    vector<double> a;
+    coeffs.AppendBiquad({{1, 1, 0}, {1, 0, 0}});
+    coeffs.AppendBiquad({{1, 2, 0}, {1, 1, 1}});
+    coeffs.AppendBiquad({{1, 3, 1}, {1, 1, 0}});
+    coeffs.AppendBiquad({{1, 0, 0}, {2, 2, 0}});
+    coeffs.AsPolynomialRatio(&b, &a);
+    EXPECT_EQ(coeffs.size(), 2);
+    EXPECT_THAT(b, testing::ElementsAre(1.0, 6.0, 12.0, 9.0, 2.0));
+    EXPECT_THAT(a, testing::ElementsAre(2.0, 6.0, 8.0, 6.0, 2.0));
+  }
 }
 
 }  // namespace

@@ -1,11 +1,12 @@
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl",
+     "git_repository", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # ===== absl =====
 git_repository(
     name = "com_google_absl",
     remote = "https://github.com/abseil/abseil-cpp.git",
-    commit = "ad5c960b2eb914881d1ceba0e996a0a8f3f6ca59",
+    commit = "c51510d1d87ebce8615ae1752fd5aca912f6cf4c",
 )
 
 # ===== fft2 =====
@@ -23,6 +24,15 @@ git_repository(
     name = "gtest",
     remote = "https://github.com/google/googletest.git",
     tag = "release-1.8.1",
+)
+
+# ==== kissfft ====
+
+new_git_repository(
+    name = "kissfft",
+    build_file = "kissfft.BUILD",
+    remote = "https://github.com/mborgerding/kissfft.git",
+    tag = "v131",
 )
 
 # ===== eigen =====

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,8 +115,7 @@ class WindowFunction {
   virtual bool zero_at_endpoints() const = 0;
 
   // Get the window name as a string.
-  virtual string name() const = 0;
-
+  virtual std::string name() const = 0;
 
   struct SpectralProperties {
     // Full width at half maximum of main lobe. Assuming radius is in units of
@@ -156,7 +155,7 @@ class CosineWindow: public WindowFunction {
   double Eval(double x) const override;
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return true; }
-  string name() const override { return "cosine"; }
+  std::string name() const override { return "cosine"; }
 };
 
 // HammingWindow implements the Hamming window
@@ -177,7 +176,7 @@ class HammingWindow: public WindowFunction {
   double Eval(double x) const override;
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return false; }
-  string name() const override { return "Hamming"; }
+  std::string name() const override { return "Hamming"; }
 
  private:
   static constexpr double kA[2] = {0.54, 0.46};
@@ -199,7 +198,7 @@ class HannWindow: public WindowFunction {
   double Eval(double x) const override;
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return true; }
-  string name() const override { return "Hann"; }
+  std::string name() const override { return "Hann"; }
 };
 
 // KaiserWindow implements the Kaiser (aka Kaiser-Bessel) window
@@ -234,7 +233,7 @@ class KaiserWindow: public WindowFunction {
   double Eval(double x) const override;
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return false; }
-  string name() const override { return "Kaiser"; }
+  std::string name() const override { return "Kaiser"; }
 
  private:
   double beta_;
@@ -261,7 +260,7 @@ class NuttallWindow: public WindowFunction {
   double Eval(double x) const override;
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return false; }
-  string name() const override { return "Nuttall"; }
+  std::string name() const override { return "Nuttall"; }
 
  private:
   static constexpr double kA[4] = {0.3635819, 0.4891775, 0.1365995, 0.0106411};
@@ -287,7 +286,7 @@ class PlanckTaperWindow: public WindowFunction {
 
   double Eval(double x) const override;
   bool zero_at_endpoints() const override { return true; }
-  string name() const override { return "Planck-taper"; }
+  std::string name() const override { return "Planck-taper"; }
 
  private:
   double epsilon_;
@@ -316,7 +315,7 @@ class QuarticWindow: public WindowFunction {
   double Eval(double x) const override;
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return false; }
-  string name() const override { return "quartic"; }
+  std::string name() const override { return "quartic"; }
 
  private:
   double c_2_;

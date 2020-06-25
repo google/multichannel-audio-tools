@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -252,8 +252,8 @@ int ParametricEqualizerParams::GetTotalNumStages() const {
   return all_stages_.size();
 }
 
-string ParametricEqualizerParams::ToString() const {
-  string info = "{ ";
+std::string ParametricEqualizerParams::ToString() const {
+  std::string info = "{ ";
   for (int i = 0; i < GetTotalNumStages(); ++i) {
     if (!IsStageEnabled(i)) {
       info += "DISABLED ";

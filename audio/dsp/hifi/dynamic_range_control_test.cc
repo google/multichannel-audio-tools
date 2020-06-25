@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -448,8 +448,9 @@ TEST(DynamicRangeControl, LookaheadImpulseTest) {
   EXPECT_GT(output(0, kImpulseTime),
             output_delayed(0, kImpulseTime + kDelaySamples) * 1.3);
   // Compressor reacts before impulse happens.
-  EXPECT_GT(output(0, kImpulseTime - 1),
-            output_delayed(0, kImpulseTime + kDelaySamples - 1) * 1.3);
+  EXPECT_GT(
+      std::abs(output(0, kImpulseTime - 1)),
+      std::abs(output_delayed(0, kImpulseTime + kDelaySamples - 1)) * 1.3);
   // Total impulse energy is reduced.
   float output_impulse_energy = 0;
   float output_delayed_impulse_energy = 0;

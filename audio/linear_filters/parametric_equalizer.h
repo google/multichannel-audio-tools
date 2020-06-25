@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ class ParametricEqualizerParams {
   int GetNumEnabledStages() const;
   int GetTotalNumStages() const;
 
-  string ToString() const;
+  std::string ToString() const;
 
   const std::vector<EqualizerFilterParams>& AllStages() const {
     return all_stages_;

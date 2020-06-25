@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -135,7 +135,7 @@ class NelderMeadSearcher {
   int num_evaluations() const { return num_evaluations_; }
 
   // Resets num_evalations to zero.
-  void reset_evaluations() const { num_evaluations_ = 0; }
+  void reset_evaluations() { num_evaluations_ = 0; }
 
  private:
   // Evaluates the objective at the given point.

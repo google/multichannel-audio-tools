@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,6 +151,9 @@ class ArithmeticSequence {
 
     Iterator& operator++() { return ++index_, *this; }
     Iterator operator++(int /* postincrement */);
+
+    Iterator& operator--() { return --index_, *this; }
+    Iterator operator--(int /* postdecrement */);
 
     Iterator& operator+=(int n) { return index_ += n, *this; }
     Iterator operator+(int n) const;

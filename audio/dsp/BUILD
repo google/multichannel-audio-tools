@@ -94,6 +94,27 @@ cc_test(
 )
 
 cc_library(
+    name = "eigen_types",
+    hdrs = ["eigen_types.h"],
+    deps = [
+        ":porting",
+        "@com_github_glog_glog//:glog",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_test(
+    name = "eigen_types_test",
+    size = "small",
+    srcs = ["eigen_types_test.cc"],
+    deps = [
+        ":porting",
+        ":eigen_types",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "elliptic_functions",
     srcs = ["elliptic_functions.cc"],
     hdrs = ["elliptic_functions.h"],
@@ -168,6 +189,30 @@ cc_test(
 )
 
 cc_library(
+    name = "kiss_fft",
+    srcs = ["kiss_fft.cc"],
+    hdrs = ["kiss_fft.h"],
+    deps = [
+        ":porting",
+        "@com_github_glog_glog//:glog",
+        "//third_party/kissfft:kiss_fft_float",
+    ],
+)
+
+cc_library(
+    name = "kiss_fft_util",
+    srcs = ["kiss_fft_util.cc"],
+    hdrs = ["kiss_fft_util.h"],
+    deps = [
+        ":eigen_types",
+        ":kiss_fft",
+        ":porting",
+        ":signal_vector_util",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_library(
     name = "nelder_mead_searcher",
     hdrs = ["nelder_mead_searcher.h"],
     deps = [
@@ -197,6 +242,7 @@ cc_library(
     hdrs = ["number_util.h"],
     deps = [
         ":porting",
+        "//audio/dsp/portable:number_util",
         "@com_github_glog_glog//:glog",
     ],
 )

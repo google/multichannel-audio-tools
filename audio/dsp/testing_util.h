@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ EigenArray2DFromNestedSpans(
 // EigenEach(inner_matcher), this function is called to get the description of
 // inner_matcher.
 template <typename LhsType>
-string GetMatcherDescriptionAsString(
+std::string GetMatcherDescriptionAsString(
     const ::testing::Matcher<LhsType>& matcher, bool negation) {
   ::std::stringstream ss;
   if (negation) {

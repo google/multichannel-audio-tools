@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include <limits>
 
 #include "glog/logging.h"
+#include "audio/dsp/portable/number_util.h"
 
 namespace audio_dsp {
 
@@ -225,6 +226,13 @@ ArithmeticSequence::Iterator ArithmeticSequence::Iterator::operator++(
   return old;
 }
 
+ArithmeticSequence::Iterator ArithmeticSequence::Iterator::operator--(
+    int /* postdecrement */) {
+  Iterator old(*this);
+  --(*this);
+  return old;
+}
+
 ArithmeticSequence::Iterator ArithmeticSequence::Iterator::operator+(
     int n) const {
   Iterator it(*this);
@@ -321,6 +329,7 @@ CrossProductRange::Iterator CrossProductRange::Iterator::operator++(
   return old;
 }
 
+
 bool CrossProductRange::Iterator::operator==(
     const CrossProductRange::Iterator& other) const {
   // Two "end" iterators are always equal. If the two iterators being
@@ -357,60 +366,10 @@ inline Fraction AppendContinuedFractionTerm(
 }  // namespace
 
 std::pair<int, int> RationalApproximation(double value, int max_denominator) {
-  CHECK(isfinite(value));
-  CHECK_GT(max_denominator, 0);
-
-  constexpr double kEps = 1e-9;
-  constexpr int kMaxTerms = 18;
-  double reciprocal_residual = value;
-  int continued_fraction_term = std::floor(value);
-  Fraction prev_convergent(1, 0);
-  Fraction convergent(continued_fraction_term, 1);
-  Fraction best_approximation(convergent);
-
-  for (int i = 0; i < kMaxTerms; ++i) {
-    if (std::abs(reciprocal_residual - continued_fraction_term) < kEps) {
-      break;  // Continued fraction has converged.
-    }
-
-    // Get the next term in the continued fraction representation.
-    reciprocal_residual = 1.0 / (reciprocal_residual - continued_fraction_term);
-    continued_fraction_term = std::floor(reciprocal_residual);
-    Fraction next_convergent = AppendContinuedFractionTerm(
-        convergent, prev_convergent, continued_fraction_term);
-
-    // Consider semiconvergents between convergent and next_convergent, in which
-    // the last continued fraction term is n with
-    //   continued_fraction_term / 2 <= n <= continued_fraction_term.
-    int n = (max_denominator - prev_convergent.second) /
-        convergent.second;  // Integer division.
-    if (n >= continued_fraction_term) {
-      // Don't need to test the semiconvergents.
-      DCHECK_LE(next_convergent.second, max_denominator);
-      best_approximation = next_convergent;
-    } else {
-      const int n_min = (continued_fraction_term + 1) / 2;  // Integer division.
-      if (n < n_min) {
-        break;
-      }
-      Fraction semiconvergent = AppendContinuedFractionTerm(
-          convergent, prev_convergent, n);
-      DCHECK_LE(semiconvergent.second, max_denominator);
-      // A semiconvergent with n = continued_fraction_term / 2 is not guaranteed
-      // to be a best approximation and must be tested vs. convergent.
-      if (!(n == n_min && continued_fraction_term % 2 == 0) ||
-          std::abs(value - FractionToDouble(semiconvergent)) <
-              std::abs(value - FractionToDouble(convergent))) {
-        best_approximation = semiconvergent;
-      }
-      break;
-    }
-
-    prev_convergent = convergent;
-    convergent = next_convergent;
-  }
-
-  return best_approximation;
+  std::pair<int, int> rational;
+  ::RationalApproximation(value, max_denominator, nullptr,
+                          &rational.first, &rational.second);
+  return rational;
 }
 
 }  // namespace audio_dsp

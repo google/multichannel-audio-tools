@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Google LLC
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ double GetMagnitudeResponseSingleStage(
 }  // namespace
 
 // Pretty print a set of coefficients.
-string AsString(const BiquadFilterCoefficients& coeffs) {
+std::string AsString(const BiquadFilterCoefficients& coeffs) {
   return absl::StrCat(
       "B = [", absl::StrJoin(coeffs.b, ", "),
       "] and ", "A = [",
@@ -49,8 +49,8 @@ string AsString(const BiquadFilterCoefficients& coeffs) {
 }
 
 // Pretty print the coefficients for a multi-stage filter.
-string AsString(const BiquadFilterCascadeCoefficients& coeffs) {
-  string output;
+std::string AsString(const BiquadFilterCascadeCoefficients& coeffs) {
+  std::string output;
   for (int i = 0; i < coeffs.size(); ++i) {
     absl::SubstituteAndAppend(&output, "Stage $0: $1 ", i, AsString(coeffs[i]));
   }
