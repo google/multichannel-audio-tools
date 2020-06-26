@@ -71,6 +71,27 @@ cc_library(
 )
 
 cc_library(
+    name = "circular_buffer",
+    hdrs = ["circular_buffer.h"],
+    deps = [
+        "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "circular_buffer_test",
+    size = "small",
+    srcs = ["circular_buffer_test.cc"],
+    deps = [
+        ":circular_buffer",
+        "@com_github_glog_glog//:glog",
+        "@gtest//:gtest_main",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
     name = "decibels",
     hdrs = ["decibels.h"],
     deps = [
@@ -360,6 +381,41 @@ cc_library(
     deps = [
         ":porting",
         ":types",
+    ],
+)
+
+
+cc_library(
+    name = "spectral_processor",
+    srcs = ["spectral_processor.cc"],
+    hdrs = ["spectral_processor.h"],
+    deps = [
+        ":circular_buffer",
+        ":kiss_fft",
+        ":number_util",
+        "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/types:span",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_library(
+    name = "teager_energy_filter",
+    hdrs = ["teager_energy_filter.h"],
+    deps = [
+        "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "teager_energy_filter_test",
+    size = "small",
+    srcs = ["teager_energy_filter_test.cc"],
+    deps = [
+        ":signal_vector_util",
+        ":teager_energy_filter",
+        "@gtest//:gtest_main",
     ],
 )
 
