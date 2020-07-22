@@ -207,15 +207,85 @@ BiquadFilterCoefficients ParametricPeakBiquadFilterSymmetricCoefficients(
 BiquadFilterCoefficients AllpassBiquadFilterCoefficients(
     float sample_rate_hz,
     float corner_frequency_hz,
-    float quality_factor) {
+    float phase_delay_radians /* at corner_frequency_hz */,
+    float group_delay_seconds /* at corner_frequency_hz */) {
   CHECK_LT(corner_frequency_hz, sample_rate_hz / 2);
+  CHECK_GT(std::abs(phase_delay_radians), 1e-5)
+      << "You don't need a filter at all!";  // Covers a divide by zero case.
+  // TODO: Can we handle the case where phase_delay_radians is a
+  // multiple of pi more elegantly?
+  CHECK_GT(std::abs(std::sin(phase_delay_radians)), 1e-5);
   CHECK_GT(corner_frequency_hz, 0.0);
-  CHECK_GT(quality_factor, 0);
-  const double p = M_PI * corner_frequency_hz / sample_rate_hz;
-  const double q_p_sq_plus_one = quality_factor * (p * p + 1);
+  CHECK(CheckAllPassConfiguration(sample_rate_hz, corner_frequency_hz,
+                                  phase_delay_radians, group_delay_seconds));
+  // Compute the allpass parameters, omega_0 and Q.
+  const double omega_hat = BilinearPrewarp(corner_frequency_hz, sample_rate_hz);
+  const double omegaT = 2 * M_PI * corner_frequency_hz / sample_rate_hz;
+  const double k = group_delay_seconds * sample_rate_hz *
+      std::sin(omegaT) / std::sin(phase_delay_radians);
+  const double omega_0 = omega_hat * std::sqrt((k - 1) / (k + 1));
+  const double cot_phase =
+      (1 + std::cos(phase_delay_radians)) / std::sin(phase_delay_radians);
+  const double Q = cot_phase * omega_0 * omega_hat /
+      (omega_hat * omega_hat - omega_0 * omega_0);
+  LOG_IF(WARNING, Q > 20) << "Large value of Q in allpass filter: " << Q;
+  // Design the allpass with parameters omega_0, and Q.
+  const double p = omega_0 / sample_rate_hz / 2;
+  const double q_p_sq_plus_one = Q * (p * p + 1);
   const double b0 = (q_p_sq_plus_one - p) / (q_p_sq_plus_one + p);
-  const double b1 = 2 * (quality_factor * (p * p - 1)) / (q_p_sq_plus_one + p);
-  // Numerator and denominator are complex conjugates of each other.
+  const double b1 = 2 * (Q * (p * p - 1)) / (q_p_sq_plus_one + p);
   return {{b0, b1, 1.0}, {1.0, b1, b0}};
 }
+
+BiquadFilterCoefficients AllpassBiquadFilterCoefficients(
+    float sample_rate_hz,
+    float corner_frequency_hz,
+    float phase_delay_radians /* at corner_frequency_hz */) {
+  return AllpassBiquadFilterCoefficients(
+      sample_rate_hz, corner_frequency_hz, phase_delay_radians,
+      MinimumGroupDelayForAllPass(sample_rate_hz, corner_frequency_hz,
+                                  phase_delay_radians));
+}
+
+namespace {
+double InfimalGroupDelayForAllPass(
+    float sample_rate_hz,
+    float corner_frequency_hz,
+    float phase_delay_radians /* at corner_frequency_hz */) {
+  const double omegaT = 2 * M_PI * corner_frequency_hz / sample_rate_hz;
+  return std::abs(std::sin(phase_delay_radians)) /
+      sample_rate_hz / std::sin(omegaT);
+}
+}  // namespace
+
+bool /* success */ CheckAllPassConfiguration(
+    float sample_rate_hz,
+    float corner_frequency_hz,
+    float phase_delay_radians /* at corner_frequency_hz */,
+    float group_delay_seconds /* at corner_frequency_hz */) {
+  if (group_delay_seconds < 0) { return false; }
+  // We can't design a filter that simply inverts the waveform at the corner
+  // frequencies.
+  if (std::abs(std::sin(phase_delay_radians)) < 1e-5) { return false; }
+  return group_delay_seconds >=
+         InfimalGroupDelayForAllPass(sample_rate_hz, corner_frequency_hz,
+                                     phase_delay_radians);
+}
+
+double MinimumGroupDelayForAllPass(
+    float sample_rate_hz,
+    float corner_frequency_hz,
+    float phase_delay_radians /* at corner_frequency_hz */) {
+  // If we are calling this function in the first place, it means we probably
+  // aren't extremely picky about the group delay. We increase the minimum
+  // group delay by an amount that will be both negligible and far enough from
+  // the precise minimum so as to not fail the CheckAllPassConfiguration CHECK.
+  //
+  // This tolerance places sets k = 1.001, ω₀ = 0.022355 * ω, and
+  // Q = 0.022366 * (cot φ / 2).
+  return 1.001 * InfimalGroupDelayForAllPass(sample_rate_hz,
+                                             corner_frequency_hz,
+                                             phase_delay_radians);
+}
+
 }  // namespace linear_filters

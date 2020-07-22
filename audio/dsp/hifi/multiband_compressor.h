@@ -152,7 +152,7 @@ class MultibandCompressor {
   float sample_rate_hz_;
   std::vector<float> crossover_frequencies_hz_;
 
-  MultiCrossoverFilter band_splitter_;
+  MultiCrossoverFilter<float> band_splitter_;
   // Gain control for each band.
   std::vector<DynamicRangeControl> per_band_drc_;
 

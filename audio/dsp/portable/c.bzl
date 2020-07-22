@@ -1,5 +1,4 @@
 """Blaze support for C.
-
 Defines c_binary, c_library, c_test rules for targets written in C. They are
 like their cc_* counterparts, but compile with C89 standard compatibility.
 """

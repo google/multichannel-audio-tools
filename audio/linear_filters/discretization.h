@@ -70,7 +70,7 @@ inline double MapFrequencyToZPlane(double corner_hz, double sample_rate_hz) {
 // the input frequency. The result has units of rad/s.
 // https://en.wikipedia.org/wiki/Bilinear_transform#Frequency_warping
 inline double BilinearPrewarp(double frequency_hz, double sample_rate_hz) {
-  return 2 * sample_rate_hz * tan(M_PI * frequency_hz / sample_rate_hz);
+  return 2 * sample_rate_hz * std::tan(M_PI * frequency_hz / sample_rate_hz);
 }
 
 // Create coefficients from a continuous-time filter's quadratic numerator

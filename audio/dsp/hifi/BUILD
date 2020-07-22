@@ -38,7 +38,6 @@ cc_test(
 
 cc_library(
     name = "multi_crossover_filter",
-    srcs = ["multi_crossover_filter.cc"],
     hdrs = ["multi_crossover_filter.h"],
     deps = [
         "//audio/linear_filters:crossover",

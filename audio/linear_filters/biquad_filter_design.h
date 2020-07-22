@@ -231,14 +231,39 @@ BiquadFilterCoefficients ParametricPeakBiquadFilterSymmetricCoefficients(
 //            s^2 - ws/Q + w^2
 //   H(s) = -------------------- ,
 //            s^2 + ws/Q + w^2
-// where w is the point at which the phase response is pi radians. Q still
-// refers to the width of the peak, but now the peak occurs not in the magnitude
-// response, but in the group delay of the filter. High Q will cause more rapid
-// phase change as you pass the corner frequency.
+// Rather than pick the Q directly, we compute it using more convenient
+// parameters like phase/group delay below.
+//
+// Parameterize an allpass in terms of group delay and phase delay at
+// a particular frequency.
+// NOTE: Not all values are valid, and this function will CHECK fail for an
+// invalid configuration. You can verify a configuration using
+// CheckAllPassConfiguration() below.
 BiquadFilterCoefficients AllpassBiquadFilterCoefficients(
     float sample_rate_hz,
     float corner_frequency_hz,
-    float quality_factor);
+    float phase_delay_radians /* at corner_frequency_hz */,
+    float group_delay_seconds /* at corner_frequency_hz */);
+
+// Uses the minimum achievable group delay. The function above can be tricky to
+// use as the range of valid group delays quickly enters the range of
+// numerically challenging filters (very rapid phase changes, high Q).
+// http://faculty.tru.ca/rtaylor/publications/allpass2_align.pdf
+BiquadFilterCoefficients AllpassBiquadFilterCoefficients(
+    float sample_rate_hz,
+    float corner_frequency_hz,
+    float phase_delay_radians /* at corner_frequency_hz */);
+
+bool /* success */ CheckAllPassConfiguration(
+    float sample_rate_hz,
+    float corner_frequency_hz,
+    float phase_delay_radians /* at corner_frequency_hz */,
+    float group_delay_seconds /* at corner_frequency_hz */);
+
+double MinimumGroupDelayForAllPass(
+    float sample_rate_hz,
+    float corner_frequency_hz,
+    float phase_delay_radians /* at corner_frequency_hz */);
 
 // Base class for IIR filter design using poles and zeros.
 //

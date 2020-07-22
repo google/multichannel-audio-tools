@@ -477,40 +477,36 @@ TEST(BiquadFilterDesignTest,
 }
 
 // Verifies that the allpass filter is flat across the entire bandwidth.
-TEST(BiquadFilterDesignTest, AllpassCoefficientsTest) {
+TEST(BiquadFilterDesignTest, AllpassCoefficients_MagnitudeResponseFlatTest) {
   constexpr double kTolerance = 1e-4;
   for (double corner_frequency_hz : {100.0f, 1000.0f, 10000.0f}) {
-    for (double quality_factor : {0.2f, 0.9f, 2.0f}) {
+    for (double phase_delay_radians : {0.1f, 0.3f}) {
       BiquadFilterCoefficients coeffs =
           AllpassBiquadFilterCoefficients(kSampleRateHz,
                                           corner_frequency_hz,
-                                          quality_factor);
-      SCOPED_TRACE(
-          StrFormat("Allpass (quality_factor = %f) with pole frequency = %f.",
-                    quality_factor, corner_frequency_hz));
-      // There is a discontinuity at corner_frequency_hz where the phase
-      // switches from -pi to pi radians.
-      ASSERT_THAT(coeffs, PhaseResponseDecreases(
-                  20.0f, 0.99 * corner_frequency_hz, kSampleRateHz,
-                  kNumPoints));
-      ASSERT_THAT(coeffs, PhaseResponseDecreases(
-                  1.01 * corner_frequency_hz, kSampleRateHz / 2, kSampleRateHz,
-                  kNumPoints));
-
+                                          phase_delay_radians);
+      SCOPED_TRACE(StrFormat(
+          "Allpass with corner_frequency_hz = %f and phase delay = %f.",
+          corner_frequency_hz, phase_delay_radians));
       for (int i = 0; i < kNumPoints; ++i) {
-        ASSERT_THAT(coeffs,
-                    MagnitudeResponseIs(DoubleNear(1.0, kTolerance),
-                                        i * kSampleRateHz / (2.0 * kNumPoints),
-                                        kSampleRateHz));
+        ASSERT_THAT(coeffs, MagnitudeResponseIs(
+                                DoubleNear(1.0, kTolerance),
+                                i * kSampleRateHz / (2.0 * kNumPoints),
+                                kSampleRateHz));
       }
     }
   }
-  BiquadFilterCoefficients spot_check =
-      AllpassBiquadFilterCoefficients(kSampleRateHz, 100, 0.2);
-  ASSERT_THAT(spot_check, PhaseResponseIs(DoubleNear(-0.93536, 1e-3),
-                                          10, kSampleRateHz));
-  ASSERT_THAT(spot_check, PhaseResponseIs(DoubleNear(0.0852, 1e-3),
-                                          10000, kSampleRateHz));
+}
+
+TEST(BiquadFilterDesignTest, AllpassCoefficients_PhaseResponseTest) {
+  for (double corner_frequency_hz : {100.0f, 1000.0f, 10000.0f}) {
+    for (double phase_delay_radians : {0.001, 0.1, 1.4, 2.9, -0.72, -3.14}) {
+      ASSERT_THAT(AllpassBiquadFilterCoefficients(
+                      kSampleRateHz, corner_frequency_hz, phase_delay_radians),
+                  PhaseResponseIs(DoubleNear(phase_delay_radians, 1e-3),
+                                  corner_frequency_hz, kSampleRateHz));
+    }
+  }
 }
 
 std::string ToString(const complex<double>& value) {
