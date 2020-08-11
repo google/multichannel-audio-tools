@@ -213,7 +213,6 @@ cc_test(
 cc_library(
     name = "filter_traits",
     hdrs = ["filter_traits.h"],
-    visibility = ["//visibility:private"],
     deps = [
         "//audio/dsp:porting",
         "//audio/dsp:types",
