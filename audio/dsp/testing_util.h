@@ -18,6 +18,7 @@
 #define AUDIO_DSP_TESTING_UTIL_H_
 
 #include <complex>
+#include <cstdlib>
 #include <string>
 
 #include "glog/logging.h"
