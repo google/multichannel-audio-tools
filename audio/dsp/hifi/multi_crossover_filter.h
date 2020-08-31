@@ -170,8 +170,7 @@ class MultiCrossoverFilter {
     return filtered_output_[band_number];
   }
 
-  double GetPhaseResponseAt(int band, double frequency_hz,
-                            bool log = false) const {
+  double GetPhaseResponseAt(int band, double frequency_hz) const {
     double phase_accum = 0;
     if (band < num_bands_ - 1) {  // Highest band doesn't have a lowpass.
       int stage = band;
