@@ -55,6 +55,12 @@ class Resampler {
                       std::vector<ValueType>* output) {
     DCHECK(Valid());
     DCHECK(output != nullptr);
+    // Shortcut for an empty input, to avoid an edge case where
+    // data() == nullptr when the vectors are empty.
+    if (input.empty()) {
+      output->clear();
+      return;
+    }
     DCHECK(output->data() != input.data()) << "Cannot resample in place!";
     output->clear();
     ProcessSamplesImpl(input, output);
