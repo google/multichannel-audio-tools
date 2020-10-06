@@ -288,6 +288,7 @@ cc_library(
     hdrs = ["resampler.h"],
     deps = [
         ":porting",
+        "@com_google_absl//absl/types:span",
     ],
 )
 

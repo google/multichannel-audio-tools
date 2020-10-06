@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "glog/logging.h"
+#include "absl/types/span.h"
 
 #include "audio/dsp/porting.h"  // auto-added.
 
@@ -50,11 +51,17 @@ class Resampler {
   }
 
   // In-place processing is not supported.
-  void ProcessSamples(const std::vector<ValueType>& input,
+  void ProcessSamples(absl::Span<const ValueType> input,
                       std::vector<ValueType>* output) {
     DCHECK(Valid());
     DCHECK(output != nullptr);
-    DCHECK(output != &input) << "Cannot resample in place!";
+    // Shortcut for an empty input, to avoid an edge case where
+    // data() == nullptr when the vectors are empty.
+    if (input.empty()) {
+      output->clear();
+      return;
+    }
+    DCHECK(output->data() != input.data()) << "Cannot resample in place!";
     output->clear();
     ProcessSamplesImpl(input, output);
   }
@@ -70,7 +77,7 @@ class Resampler {
  protected:
   virtual void ResetImpl() = 0;
   virtual bool ValidImpl() const = 0;
-  virtual void ProcessSamplesImpl(const std::vector<ValueType>& input,
+  virtual void ProcessSamplesImpl(absl::Span<const ValueType> input,
                                   std::vector<ValueType>* output) = 0;
   virtual void FlushImpl(std::vector<ValueType>* output) = 0;
 };
