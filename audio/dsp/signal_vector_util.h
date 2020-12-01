@@ -64,7 +64,7 @@ void MultiplyVectorByScalar(ValueType multiplier, ContainerType* target) {
 template <typename ContainerType>
 typename ContainerType::value_type Sum(const ContainerType& in) {
   typedef typename ContainerType::value_type ValueType;
-  return accumulate(in.cbegin(), in.cend(), ValueType());
+  return std::accumulate(in.cbegin(), in.cend(), ValueType());
 }
 
 // Compute mean and variance of a container of real or complex-valued elements.

@@ -249,6 +249,10 @@ class DynamicRangeControl {
   // sample_rate_hz is the audio sample rate.
   void Init(int num_channels, int max_block_size_samples, float sample_rate_hz);
 
+  int num_channels() const;
+
+  int max_block_size_samples() const;
+
   void Reset();
 
   // This should be called in between calls to ProcessBlock. If called multiple

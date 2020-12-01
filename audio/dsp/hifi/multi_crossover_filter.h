@@ -171,29 +171,38 @@ class MultiCrossoverFilter {
   }
 
   double GetPhaseResponseAt(int band, double frequency_hz) const {
-    double phase_accum = 0;
-    if (band < num_bands_ - 1) {  // Highest band doesn't have a lowpass.
-      int stage = band;
-      phase_accum += lowpass_coeffs_[stage].PhaseResponseAtFrequency(
-          frequency_hz, sample_rate_hz_);
-    }
-    // Lowest band doesn't have a highpass.
-    for (int stage = 0; stage < band; ++stage) {
-      phase_accum += highpass_coeffs_[stage].PhaseResponseAtFrequency(
-          frequency_hz, sample_rate_hz_);
-    }
-    // NOTE: When GetPhaseResponseAt() is being called during
+    // NOTE: When GetAllCoefficients() is being called during
     // SetCrossoverFrequenciesInternal(), it being used to fill in the
     // allpass_coeffs_ array, which starts as bypassed filters and eventually
     // becomes full of all pass filters. It is working as intended for this
     // to return different values as this array is filled in.
-    if (band < num_bands_with_allpass_) {
-      // Recall, allpass_coeffs_[band] is multiple biquads.
-      phase_accum += allpass_coeffs_[band].PhaseResponseAtFrequency(
+    return GetCoefficientsForBand(band).PhaseResponseAtFrequency(
           frequency_hz, sample_rate_hz_);
-    }
-    return phase_accum;
   }
+
+  linear_filters::BiquadFilterCascadeCoefficients GetCoefficientsForBand(
+      int band) const {
+    linear_filters::BiquadFilterCascadeCoefficients this_band;
+    if (band < num_bands_ - 1) {  // Highest band doesn't have a lowpass.
+      int stage = band;
+      for (int i = 0; i < lowpass_coeffs_[stage].size(); ++i) {
+        this_band.AppendBiquad(lowpass_coeffs_[stage][i]);
+      }
+    }
+    // Lowest band doesn't have a highpass.
+    for (int stage = 0; stage < band; ++stage) {
+      for (int i = 0; i < highpass_coeffs_[stage].size(); ++i) {
+        this_band.AppendBiquad(highpass_coeffs_[stage][i]);
+      }
+    }
+    if (band < num_bands_with_allpass_) {
+      for (int i = 0; i < allpass_coeffs_[band].size(); ++i) {
+        this_band.AppendBiquad(allpass_coeffs_[band][i]);
+      }
+    }
+    return this_band;
+  }
+
 
   // The returned angle will be between [-pi and pi).
   template <typename T>

@@ -238,7 +238,7 @@ struct BiquadFilterCascadeCoefficients {
 
   double GainMagnitudeAtFrequency(double frequency_radians_per_sample) const {
     std::complex<double> z = std::polar(1.0, frequency_radians_per_sample);
-    return abs(EvalTransferFunction(z));
+    return std::abs(EvalTransferFunction(z));
   }
 
   double GainMagnitudeAtFrequency(double frequency, double sample_rate) const {

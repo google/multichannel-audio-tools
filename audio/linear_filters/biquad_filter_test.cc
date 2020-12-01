@@ -459,7 +459,7 @@ TEST(BiquadFilterCascadeTest, BiquadFilterCascadePeakFrequency) {
     for (double frequency = 0.8 * M_PI; frequency > 1e-4; frequency *= 0.8) {
       complex<double> pole_s(-frequency / (2 * Q),
                              frequency * sqrt(1.0 - 1.0 / (4 * Q * Q)));
-      complex<double> pole_z = exp(pole_s);  // Map to z plane.
+      complex<double> pole_z = std::exp(pole_s);  // Map to z plane.
       double pole_x = pole_z.real();
       double pole_radius = std::abs(pole_z);
       std::vector<double> poles({1.0, -2 * pole_x, pole_radius * pole_radius});
@@ -529,7 +529,7 @@ TEST(BiquadFilterCascadeTest, BiquadFilterCascadeScalarFloatSetPeakGain) {
   double peak_frequency =
       cascade_coeffs.FindPeakFrequencyRadiansPerSample().first;
   std::complex<float> z_peak(cos(peak_frequency), sin(peak_frequency));
-  double old_peak_gain = abs(cascade_coeffs.EvalTransferFunction(z_peak));
+  double old_peak_gain = std::abs(cascade_coeffs.EvalTransferFunction(z_peak));
   // Product of distances from zeros (2.0) over distances from poles, squared,
   // which is expected_peak_gain = (8/3)^2 = 64/9 = 7.111111:
   double expected_peak_gain = pow(2.0 / (0.5 * 1.5), kNumStages);
@@ -540,8 +540,8 @@ TEST(BiquadFilterCascadeTest, BiquadFilterCascadeScalarFloatSetPeakGain) {
   filter.Init(1, cascade_coeffs);
 
   expected *= new_peak_gain / old_peak_gain;
-  EXPECT_NEAR(new_peak_gain, abs(cascade_coeffs.EvalTransferFunction(z_peak)),
-              1e-5);
+  EXPECT_NEAR(new_peak_gain,
+              std::abs(cascade_coeffs.EvalTransferFunction(z_peak)), 1e-5);
 
   EXPECT_NEAR(M_PI / 2, peak_frequency, 1e-5);
 

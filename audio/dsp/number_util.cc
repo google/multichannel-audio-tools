@@ -65,6 +65,15 @@ int GreatestCommonDivisor(int a, int b) {
   return a;
 }
 
+int GreatestCommonDivisor(const std::vector<int>& a) {
+  DCHECK_GE(a.size(), 1);
+  int gcd = a[0];
+  for (int i = 1; i < a.size(); ++i) {
+    gcd = GreatestCommonDivisor(gcd, a[i]);
+  }
+  return gcd;
+}
+
 int Log2Floor(unsigned value) {
   if (value == 0) {
     return -1;

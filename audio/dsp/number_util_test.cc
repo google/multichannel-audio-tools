@@ -129,6 +129,10 @@ TEST(NumberUtilTest, GreatestCommonDivisor) {
   EXPECT_EQ(87, GreatestCommonDivisor(13 * 87, 16 * 87));
   EXPECT_EQ(7, GreatestCommonDivisor(7, 7));
   EXPECT_EQ(0, GreatestCommonDivisor(0, 0));
+  // Vector signature.
+  EXPECT_EQ(7, GreatestCommonDivisor({7, 7, 7}));
+  EXPECT_EQ(1, GreatestCommonDivisor({1, 7, 7}));
+  EXPECT_EQ(7, GreatestCommonDivisor({49, 14, 21}));
 }
 
 TEST(NumberUtilTest, IsPowerOfTwoOrZero) {

@@ -56,16 +56,20 @@ class SpectralProcessor {
   };
 
   // num_in_channels and num_out_channels specify the number of audio streams
-  // that will be used at streaming time. chunk_length is the number of frames
-  // (samples per channel) that will be passed to ProcessChunk(). The samples
-  // will be windowed before and after the spectral transform by window. The
-  // transform will have length block_length and a hop size of hop_size. Power
-  // of two block lengths will be fastest, though block_length may be any
+  // that will be used at streaming time. chunk_length is the number of
+  // frames (samples per channel) that will be passed to ProcessChunk(). The
+  // samples will be windowed before and after the spectral transform by window.
+  // The transform will have length block_length and a hop size of hop_size.
+  // Power of two block lengths will be fastest, though block_length may be any
   // positive integer.
-  // TODO: chunks smaller than chunk_length would work without much
-  // modification.
-  SpectralProcessor(int num_in_channels, int num_out_channels, int chunk_length,
-                    absl::Span<float> window, int block_length,
+  SpectralProcessor(int num_in_channels, int num_out_channels,
+                    int chunk_length, absl::Span<const float> window,
+                    int block_length, int hop_size, Callback* block_processor);
+
+  // Supports variable input chunk sizes.
+  SpectralProcessor(int num_in_channels, int num_out_channels,
+                    const std::vector<int>& possible_chunk_lengths,
+                    absl::Span<const float> window, int block_length,
                     int hop_size, Callback* block_processor);
 
   ~SpectralProcessor() {}
@@ -81,19 +85,19 @@ class SpectralProcessor {
   template <typename EigenType>
   void ProcessChunk(const EigenType& input, EigenType* output) {
     DCHECK_EQ(input.rows(), num_in_channels());
-    DCHECK_EQ(input.cols(), chunk_length());
-    output->resize(num_out_channels(), chunk_length());
+    DCHECK_LE(input.cols(), max_chunk_length());
+    output->resize(num_out_channels(), input.cols());
     ProcessChunk(Eigen::Map<const Eigen::ArrayXXf>(
-                     input.data(), num_in_channels(), chunk_length()),
-                 Eigen::Map<Eigen::ArrayXXf>(
-                     output->data(), num_out_channels(), chunk_length()));
+                     input.data(), num_in_channels(), input.cols()),
+                 Eigen::Map<Eigen::ArrayXXf>(output->data(), num_out_channels(),
+                                             input.cols()));
   }
 
   // Get the chunk length.
   //
   // The chunk length is the number of samples per channel (frames) that must be
   // passed to ProcessChunk.
-  int chunk_length() const { return chunk_length_; }
+  int max_chunk_length() const { return max_chunk_length_; }
 
   int num_in_channels() const { return num_in_channels_; }
   int num_out_channels() const { return num_out_channels_; }
@@ -114,15 +118,14 @@ class SpectralProcessor {
   // Move processed data into the output buffer and put leftovers in storage.
   // start_frame is the first column of out_chunk to use.
   void MoveProcessedIntoOutputAndOverflow(
-      Eigen::Map<const Eigen::ArrayXXf> processed,
-      int start_frame,
+      Eigen::Map<const Eigen::ArrayXXf> processed, int start_frame,
       Eigen::Map<Eigen::ArrayXXf> out_chunk);
 
   const int num_in_channels_;
   const int num_out_channels_;
   const int hop_size_;
   const int block_length_;
-  const int chunk_length_;
+  const int max_chunk_length_;
   Callback* const block_processor_;
 
   int position_in_output_;

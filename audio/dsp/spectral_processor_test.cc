@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <random>
 
 #include "audio/beamer/array_util.h"
 #include "audio/dsp/signal_generator.h"
@@ -707,6 +708,67 @@ TEST(SpectralProcessorTest, StreamingTest) {
                                        chunk_length),
             Eigen::Map<ArrayXXf>(out_buffer.data() + offset, kNumChannels,
                                  chunk_length));
+      }
+      EXPECT_THAT(out_buffer.leftCols(processor.latency_frames()),
+                  EigenArrayNear(Eigen::ArrayXXf::Zero(
+                                     kNumChannels, processor.latency_frames()),
+                                 1e-5));
+      int num_filled_cols = out_buffer.cols() - processor.latency_frames();
+      EXPECT_THAT(out_buffer.rightCols(num_filled_cols),
+                  EigenArrayNear(in_buffer.leftCols(num_filled_cols), 1e-4));
+    }
+  }
+}
+
+TEST(SpectralProcessorTest, StreamingRandomSizesTest) {
+  const int kNumChunks = 500;
+  const int kNumChannels = 2;
+  std::mt19937 rng(0 /* seed */);
+
+  for (int max_chunk_length : {4, 16, 21, 64, 199, 256}) {
+    // Only even block sizes can have perfect reconstruction with 50% overlap.
+    for (int block_length : {6, 16, 28, 64, 202, 256}) {
+      const int kFullLengthFrames = max_chunk_length * kNumChunks;
+
+      BypassCallback bypass_callback;
+
+      // Cosine window has the perfect reconstruction property with 50% overlap.
+      // (the window is applied twice, once before and once after the FFT).
+      std::vector<float> window(block_length);
+      CosineWindow().GetPeriodicSamples(block_length, &window);
+
+      // Prepare for all possible block sizes.
+      std::vector<int> possible_sizes(max_chunk_length);
+      for (int i = 0; i < max_chunk_length; ++i) { possible_sizes[i] = i + 1; }
+
+      // Half overlap.
+      SpectralProcessor processor(kNumChannels, kNumChannels, possible_sizes,
+                                  Span<float>(window.data(), block_length),
+                                  block_length, block_length / 2,
+                                  &bypass_callback);
+      Eigen::ArrayXXf in_buffer =
+          Eigen::ArrayXXf::Random(kNumChannels, kFullLengthFrames);
+      Eigen::ArrayXXf out_buffer(kNumChannels, kFullLengthFrames);
+
+      int offset = 0;
+      for (int i = 0; i < kFullLengthFrames;) {
+        int upper_bound = std::min(kFullLengthFrames - i, max_chunk_length);
+        auto chunk_size_generator =
+            std::uniform_int_distribution<>(1, upper_bound);
+        const int chunk_size = chunk_size_generator(rng);
+        SCOPED_TRACE(
+            "max_chunk_length: " + testing::PrintToString(max_chunk_length) +
+            "offset: " + testing::PrintToString(offset) +
+            "kFullLengthFrames: " + testing::PrintToString(kFullLengthFrames) +
+            "chunk_size: " + testing::PrintToString(chunk_size) +
+            " block_length: " + testing::PrintToString(block_length));
+        processor.ProcessChunk(
+            Eigen::Map<const ArrayXXf>(in_buffer.data() + offset, kNumChannels,
+                                       chunk_size),
+            Eigen::Map<ArrayXXf>(out_buffer.data() + offset, kNumChannels,
+                                 chunk_size));
+        offset += kNumChannels * chunk_size;
+        i += chunk_size;
       }
       EXPECT_THAT(out_buffer.leftCols(processor.latency_frames()),
                   EigenArrayNear(Eigen::ArrayXXf::Zero(
