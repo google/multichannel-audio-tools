@@ -100,10 +100,16 @@ class CircularBuffer {
     return {first, second};
   }
 
-  // num_to_read must be less than NumReadableEntries()! The read pointer is
-  // advanced by output.size() samples.
+  // The read pointer is advanced by output.size() samples.
   void Read(MutableSpan output) {
     std::pair<Span, Span> buffers = Read(output.size());
+    CopySpansToBuffer(buffers, output);
+  }
+
+  // num_to_read must be less than NumReadableEntries()! The read pointer is
+  // advanced by output.size() samples.
+  void Read(int num_to_read, MutableSpan output) {
+    std::pair<Span, Span> buffers = Read(num_to_read);
     CopySpansToBuffer(buffers, output);
   }
 
