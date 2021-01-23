@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,19 +47,16 @@ void EnvelopeDetector::Init(
           sample_rate_hz_, envelope_cutoff_hz_, kOverdamped);
   envelope_smoother_.Init(num_channels, smoother_coeffs_);
 
-  auto resampling_kernel = DefaultResamplingKernel(
-      sample_rate_hz, envelope_sample_rate_hz);
-  for (int channel = 0; channel < num_channels_; ++channel) {
-    downsamplers_.emplace_back(resampling_kernel, 500);
-  }
+  QResamplerParams downsampler_params;
+  downsampler_params.max_denominator = 500;
+  downsampler_.Init(sample_rate_hz, envelope_sample_rate_hz, num_channels_,
+                    downsampler_params);
 }
 
 void EnvelopeDetector::Reset() {
   prefilter_.Reset();
   envelope_smoother_.Reset();
-  for (auto& downsampler : downsamplers_) {
-    downsampler.Reset();
-  }
+  downsampler_.Reset();
 }
 
 bool EnvelopeDetector::ProcessBlock(const ArrayXXf& input, ArrayXXf* output) {
@@ -78,16 +75,7 @@ bool EnvelopeDetector::ProcessBlock(const ArrayXXf& input, ArrayXXf* output) {
   } else {
     envelope_smoother_.ProcessBlock(workspace_, &workspace_);
     // Downsample the signal.
-    Eigen::ArrayXf out;
-    for (int channel = 0; channel < num_channels_; ++channel) {
-      downsamplers_[channel].ProcessSamplesEigen(
-          workspace_.row(channel).matrix(), &out);
-      // Make output the correct shape.
-      if (channel == 0) {
-        output->resize(num_channels_, out.size());
-      }
-      output->row(channel) = out;
-    }
+    downsampler_.ProcessSamples(workspace_, output);
   }
   // Undo the square to obtain the RMS value.
   *output = output->array().abs().sqrt();

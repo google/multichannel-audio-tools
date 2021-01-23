@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 
 #include <vector>
 
-#include "audio/dsp/resampler_rational_factor.h"
+#include "audio/dsp/resampler_q.h"
 #include "audio/linear_filters/biquad_filter.h"
 #include "third_party/eigen3/Eigen/Core"
 
@@ -95,8 +95,7 @@ class EnvelopeDetector {
 
   linear_filters::BiquadFilterCascade<Eigen::ArrayXf> prefilter_;
   linear_filters::BiquadFilter<Eigen::ArrayXf> envelope_smoother_;
-  // We need one of these for each channel.
-  std::vector<audio_dsp::RationalFactorResampler<float>> downsamplers_;
+  audio_dsp::QResampler<float> downsampler_;
 };
 
 }  // namespace audio_dsp

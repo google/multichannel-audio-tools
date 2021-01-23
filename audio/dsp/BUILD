@@ -1,3 +1,17 @@
+# Copyright 2020-2021 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Description:
 #   DSP tools for processing audio.
 
@@ -120,6 +134,9 @@ cc_library(
     deps = [
         ":porting",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/meta:type_traits",
+        "@com_google_absl//absl/types:span",
         "//third_party/eigen3",
     ],
 )
@@ -131,6 +148,7 @@ cc_test(
     deps = [
         ":porting",
         ":eigen_types",
+        ":testing_util",
         "@gtest//:gtest_main",
     ],
 )
@@ -166,7 +184,7 @@ cc_library(
     hdrs = ["envelope_detector.h"],
     deps = [
         ":porting",
-        ":resampler_rational_factor",
+        ":resampler_q",
         "//audio/linear_filters:biquad_filter",
         "//audio/linear_filters:biquad_filter_design",
         "//third_party/eigen3",
@@ -292,9 +310,56 @@ cc_library(
 )
 
 cc_library(
+    name = "resampler_q",
+    srcs = ["resampler_q.cc"],
+    hdrs = ["resampler_q.h"],
+    deps = [
+        ":eigen_types",
+        ":number_util",
+        ":porting",
+        ":resampler",
+        ":types",
+        "@com_google_absl//absl/meta:type_traits",
+        "@com_google_absl//absl/types:span",
+        "//audio/dsp/portable:rational_factor_resampler_kernel",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_test(
+    name = "resampler_q_test",
+    size = "large",
+    srcs = [
+        "eigen_types.h",
+        "resampler_q.cc",
+        "resampler_q.h",
+        "resampler_q_test.cc",
+        "types.h",
+    ],
+    copts = ["-Iexternal/gtest/include"],
+    defines = ["EIGEN_RUNTIME_NO_MALLOC"],  # Test Eigen memory allocations.
+    deps = [
+        ":number_util",
+        ":resampler",
+        ":signal_vector_util",
+        ":testing_util",
+        "//audio/dsp/portable:rational_factor_resampler_kernel",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/meta:type_traits",
+        "@com_google_absl//absl/types:span",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@gtest//:gtest_main",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_library(
     name = "resampler_rational_factor",
     srcs = ["resampler_rational_factor.cc"],
     hdrs = ["resampler_rational_factor.h"],
+    deprecation = "RationalFactorResampler is superseded by QResampler. " +
+        "Please see migration notes at the top of resampler_rational_factor.h.",
     deps = [
         ":bessel_functions",
         ":number_util",
@@ -464,6 +529,7 @@ cc_test(
         ":porting",
         ":types",
         "@gtest//:gtest_main",
+        "@com_google_absl//absl/memory",
     ],
 )
 

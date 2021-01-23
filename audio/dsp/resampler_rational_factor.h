@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,46 @@
  * limitations under the License.
  */
 
+// WARNING: This library is DEPRECATED as of 2021-01-23.
+//
 // Fast audio resampling by a rational factor.
 //
 // RationalFactorResampler performs resampling using a polyphase FIR filter. We
 // use the Eigen library to leverage SIMD optimization, computing each output
 // sample as a dot product.
-
+//
+//
+// Migration notes:
+//
+// RationalFactorResampler is superseded by QResampler, audio/dsp/resampler_q.h.
+// Compared to RationalFactorResampler, QResampler is easier to use without
+// allocations after construction, has a simpler interface, and adds
+// multichannel support.
+//
+//  * Same output: QResampler produces the same resampled output as
+//    RationalFactorResampler up to near machine precision, so migrating should
+//    have negligible effect on how signals are resampled. The underlying kernel
+//    and filtering is the same as before, yet removing the cost of allocating
+//    the output improves benchmarks by ~10%.
+//
+//  * Construction: QResampler has a revised (and usually easier) construction
+//    interface. Instead of DefaultResamplingKernel, set QResamplerParams. To
+//    convert DefaultResamplingKernel settings to equivalent QResamplerParams,
+//    see "Conversion from RationalFactorResampler kernel params" at the top of
+//    audio/dsp/resampler_q.h.
+//
+//  * Passing Eigen containers: QResampler's `ProcessSamples()` and `Flush()`
+//    methods have the same meaning as in RationalFactorResampler. However,
+//    QResampler supports more container types for the input and ouput args,
+//    including most Eigen containers. So QResampler does not have
+//    `ProcessSamplesEigen()` or `FlushEigen()`; use `ProcessSamples()` and
+//    `Flush()` instead.
+//
+//  * QResampler otherwise has a compatible API. `Reset()` and
+//    `ResetFullyPrimed()` have the same meaning as in RationalFactorResampler.
+//
+// See also the top-level comment of audio/dsp/resampler_q.h for further notes
+// about how to use QResampler's new features, such as multichannel resampling.
 
 #ifndef AUDIO_DSP_RESAMPLER_RATIONAL_FACTOR_H_
 #define AUDIO_DSP_RESAMPLER_RATIONAL_FACTOR_H_

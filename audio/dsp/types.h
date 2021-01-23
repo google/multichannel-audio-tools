@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #define AUDIO_DSP_TYPES_H_
 
 #include <complex>
+#include <memory>
 #include <type_traits>
 
 #include "audio/dsp/porting.h"  // auto-added.
@@ -92,6 +93,31 @@ struct FloatPromotion {
       // Otherwise just return ValueType.
       ValueType>::type Type;
 };
+
+// If `x` is a pointer, dereference it. Otherwise, return it unchanged:
+//
+//   std::vector<float> x;
+//   DerefIfPointer(x) == x
+//
+//   std::vector<float>* y;
+//   DerefIfPointer(y) == *y
+//
+//   std::unique_ptr<std::vector<float>> z;
+//   DerefIfPointer(z) == *z
+//
+// At most one level of indirection is dereferenced. If `x` is a pointer to a
+// pointer T**, then DerefIfPointer(x) returns a T*.
+//
+// NOTE: This template works with std::unique_ptr<T>, but not with other smart
+// pointers.
+template <typename T>
+T&& DerefIfPointer(T&& x) { return std::forward<T>(x); }
+
+template <typename T>
+T& DerefIfPointer(T* x) { return *x; }
+
+template <typename T>
+T& DerefIfPointer(std::unique_ptr<T>& x) { return *x; }
 
 }  // namespace audio_dsp
 

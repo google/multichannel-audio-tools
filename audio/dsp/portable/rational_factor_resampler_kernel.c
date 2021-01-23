@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020-2021 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "audio/dsp/portable/rational_factor_resampler_kernel.h"
 
 #include <assert.h>
@@ -77,7 +93,7 @@ int RationalFactorResamplerKernelInit(RationalFactorResamplerKernel* kernel,
    * downsampling (factor > 1), the radius is `filter_radius_factor` *output*
    * samples, which is `filter_radius_factor * factor` input samples.
    */
-  kernel->radius = ceil(filter_radius_factor * factor_max_1);
+  kernel->radius = filter_radius_factor * factor_max_1;
   /* Compute the cutoff as a proportion of the input Nyquist frequency
    * [described in the .h file as theta = B / (Fs_in / 2)]. The cutoff frequency
    * is `cutoff_proportion` of the input or output Nyquist frequency, whichever

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "absl/memory/memory.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -28,6 +29,7 @@ namespace audio_dsp {
 namespace {
 
 using ::std::complex;
+using ::testing::ElementsAre;
 
 template <typename Type1, typename Type2>
 void TypesMatch() {
@@ -96,6 +98,46 @@ TEST(TypesTest, FloatPromotion) {
   TypesMatch<complex<double>, FloatPromotion<complex<double>>::Type>();
   TypesMatch<complex<long double>,
       FloatPromotion<complex<long double>>::Type>();
+}
+
+TEST(TypesTest, DerefIfPointer) {
+  {
+    int x = 5;
+    const int* y = &x;
+    const int& z = x;
+    // Arg: int.
+    EXPECT_EQ(DerefIfPointer(x), 5);
+    TypesMatch<int&, decltype(DerefIfPointer(x))>();
+    // Arg: const int*.
+    EXPECT_EQ(DerefIfPointer(y), 5);
+    TypesMatch<const int&, decltype(DerefIfPointer(y))>();
+    // Arg: const int&.
+    EXPECT_EQ(DerefIfPointer(z), 5);
+    TypesMatch<const int&, decltype(DerefIfPointer(z))>();
+  }
+  {
+    auto x = absl::make_unique<std::vector<int>>();
+    const std::vector<int>* y = x.get();
+    x->assign({1, 2, 3});
+    // Arg: unique_ptr<vector<int>>.
+    EXPECT_THAT(DerefIfPointer(x), ElementsAre(1, 2, 3));
+    TypesMatch<std::vector<int>&, decltype(DerefIfPointer(x))>();
+    // Arg: vector<int>*.
+    EXPECT_THAT(DerefIfPointer(x.get()), ElementsAre(1, 2, 3));
+    TypesMatch<std::vector<int>&, decltype(DerefIfPointer(x.get()))>();
+    // Arg: vector<int>&.
+    EXPECT_THAT(DerefIfPointer(*x), ElementsAre(1, 2, 3));
+    TypesMatch<std::vector<int>&, decltype(DerefIfPointer(*x))>();
+    // Arg: const vector<int>*.
+    EXPECT_THAT(DerefIfPointer(y), ElementsAre(1, 2, 3));
+    TypesMatch<const std::vector<int>&, decltype(DerefIfPointer(y))>();
+    // Arg: const vector<int>&.
+    EXPECT_THAT(DerefIfPointer(*y), ElementsAre(1, 2, 3));
+    TypesMatch<const std::vector<int>&, decltype(DerefIfPointer(*y))>();
+    // Arg: vector<int>&&.
+    EXPECT_THAT(DerefIfPointer(std::move(*x)), ElementsAre(1, 2, 3));
+    TypesMatch<std::vector<int>&&, decltype(DerefIfPointer(std::move(*x)))>();
+  }
 }
 
 }  // namespace
