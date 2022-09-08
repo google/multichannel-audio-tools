@@ -87,12 +87,12 @@ static void WriteBytesAsFile(const char* file_name,
   fclose(f);
 }
 
-void TestReadMonoWav() {
+static void TestReadMonoWav(void) {
+  puts("TestReadMonoWav");
   const char* wav_file_name = NULL;
   FILE* f;
   ReadWavInfo info;
 
-  puts("Running TestReadMonoWavStreaming");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest16BitMonoWavFile, 52);
 
@@ -110,12 +110,12 @@ void TestReadMonoWav() {
   fclose(f);
 }
 
-void TestNonstandardWavFile() {
+static void TestNonstandardWavFile(void) {
+  puts("TestNonstandardWavFile");
   const char* wav_file_name = NULL;
   FILE* f;
   ReadWavInfo info;
 
-  puts("Running TestNonstandardWavFile");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kNonStandardWavFile, 56);
 

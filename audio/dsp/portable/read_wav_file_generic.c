@@ -4,6 +4,7 @@
 
 #include "audio/dsp/portable/read_wav_file_generic.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,9 @@
 #define kWavPcmGuid "\x00\x00\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
 #define kWavFactChunkSize 4
 
+/* We assume IEEE 754 floats. Statically assert that `sizeof(float) == 4`. */
+typedef char kReadWaveFileStaticAssert_SIZEOF_FLOAT_MUST_EQUAL_4
+    [(sizeof(float) == 4) ? 1 : -1];
 
 static void ReadWithErrorCheck(void* bytes, size_t num_bytes, WavReader* w) {
   size_t read_bytes = w->read_fun(bytes, num_bytes, w->io_ptr);
@@ -154,17 +158,15 @@ static int ReadWavFmtChunk(WavReader* w, ReadWavInfo* info,
 
   if (w->has_error) { return 0; }
 
+  if (num_channels == 0) {
+    LOG_ERROR("Error: Invalid WAV. Channels not specified.\n");
+    return 0;
+  }
   if (block_align != (significant_bits_per_sample / 8) * num_channels) {
     /* The block alignment actually isn't used, so this doesn't guarantee a
      * problem with the data. It could just be a header problem.
      */
     LOG_ERROR("Error: Block alignment is incorrectly specified.\n");
-  }
-
-  if (num_channels == 0) {
-    /* This can happen if the data chunk precedes the format chunk. */
-    LOG_ERROR("Error: Invalid WAV. Channels not specified.\n");
-    return 0;
   }
 
   switch (format_code) {
@@ -202,7 +204,7 @@ static int ReadWavFmtChunk(WavReader* w, ReadWavInfo* info,
       info->destination_alignment_bytes = 2 /* 16-bit int after decoding */;
       info->sample_format = kInt16;
       if (significant_bits_per_sample != 8) {
-        LOG_ERROR("Error: Mulaw data must be 8 bit per sample.\n");
+        LOG_ERROR("Error: Mulaw data must be 8 bits per sample.\n");
         return 0;
       }
       break;
@@ -223,11 +225,20 @@ static int ReadWavFactChunk(WavReader* w, ReadWavInfo* info,
    * in floating point format. Overwrite the value that may already be
    * written.
    */
-  if (chunk_size != kWavFactChunkSize) {
+  if (chunk_size != kWavFactChunkSize ||
+      /* Prevent division by zero. */
+      info->num_channels == 0) {
     LOG_ERROR("Error: WAV has invalid fact chunk.\n");
     return 0;
   }
   uint32_t num_frames = ReadUint32(w);
+
+  /* Prevent overflow. */
+  if (num_frames > SIZE_MAX / info->num_channels) {
+    LOG_ERROR("Error: Number of WAV samples exceeds %zu.\n", SIZE_MAX);
+    return 0;
+  }
+
   info->remaining_samples = info->num_channels * num_frames;
   return 1;
 }
@@ -287,7 +298,14 @@ int ReadWavHeaderGeneric(WavReader* w, ReadWavInfo* info) {
         LOG_ERROR("Error: WAV has unsupported chunk order.\n");
         goto fail;
       }
-      size_t remaining_samples = chunk_size / (info->bit_depth / 8);
+
+      const uint32_t num_samples = chunk_size / (info->bit_depth / 8);
+      if (UINT32_MAX > SIZE_MAX && num_samples > SIZE_MAX) {
+        LOG_ERROR("Error: Number of WAV samples exceeds %zu.\n", SIZE_MAX);
+        goto fail;
+      }
+      size_t remaining_samples = (size_t)num_samples;
+
       if (read_fact_chunk && remaining_samples != info->remaining_samples) {
         LOG_ERROR("Error: WAV fact and data chunks indicate different data "
                   "size. Using size from data chunk.\n");
@@ -340,7 +358,7 @@ static size_t ReadBytesAsSamples(WavReader* w, ReadWavInfo* info,
   }
 
   if (w == NULL || w->io_ptr == NULL || info == NULL ||
-      info->remaining_samples < info->num_channels ||
+      info->remaining_samples < (size_t)info->num_channels ||
       dst_samples == NULL || num_samples <= 0) {
     return 0;
   }
@@ -353,6 +371,12 @@ static size_t ReadBytesAsSamples(WavReader* w, ReadWavInfo* info,
     samples_to_read = num_samples;
   }
   samples_to_read -= samples_to_read % info->num_channels;
+
+  /* Prevent overflow. */
+  if (samples_to_read > SIZE_MAX / info->destination_alignment_bytes) {
+    LOG_ERROR("Error: WAV samples data exceeds %zu bytes.\n", SIZE_MAX);
+    return 0;
+  }
 
   for (current_sample = 0; current_sample < samples_to_read; ++current_sample) {
     switch (info->destination_alignment_bytes) {
