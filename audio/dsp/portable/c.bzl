@@ -3,10 +3,13 @@ Defines c_binary, c_library, c_test rules for targets written in C. They are
 like their cc_* counterparts, but compile with C89 standard compatibility.
 """
 
-WARNING_OPTS = [
-    # Suppress "unused function" warnings on `static` functions in .h files.
-    "-Wno-unused-function",
-]
+WARNING_OPTS =  select({
+    "@bazel_tools//src/conditions:windows": [],
+    "//conditions:default": [
+         # Suppress "unused function" warnings on `static` functions in .h files.
+         "-Wno-unused-function",
+    ]
+})
 
 # Build with C89 standard compatibility.
 DEFAULT_C_OPTS = WARNING_OPTS + ["-std=c89"]
