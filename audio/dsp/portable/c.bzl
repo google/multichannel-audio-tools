@@ -7,6 +7,7 @@ WARNING_OPTS =  select({
     "@bazel_tools//src/conditions:windows": [],
     "//conditions:default": [
          # Suppress "unused function" warnings on `static` functions in .h files.
+         # Excluded from Windows due to lack of support by Visual Studio 2017. 
          "-Wno-unused-function",
     ]
 })
