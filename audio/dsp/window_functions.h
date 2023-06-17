@@ -42,7 +42,7 @@
 //      KaiserWindow window(radius, beta);
 //      double value = window.Eval(x);
 //
-// An arbitary window can be represented with a base class WindowFunction
+// An arbitrary window can be represented with a base class WindowFunction
 // reference, for example
 //   void SpectralAnalysis(const WindowFunction& window, /* other args */);
 //   // Call with Nuttall window.
@@ -68,7 +68,7 @@ namespace audio_dsp {
 class WindowFunction {
  public:
   explicit WindowFunction(double radius = 1.0);
-  virtual ~WindowFunction() {}
+  virtual ~WindowFunction() = default;
 
   // Sample symmetric window samples, suitable for filter design. The resulting
   // num_samples samples are symmetric. For an odd num_samples, the center
@@ -199,6 +199,24 @@ class HannWindow: public WindowFunction {
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return true; }
   std::string name() const override { return "Hann"; }
+};
+
+// SqrtHannWindow implements square root of the Hann window
+//   w(x) = cos((pi/2) x/radius) for |x| <= radius,
+// or equivalently w(x) = sqrt(HannWindow(radius).Eval(x)).
+//
+// Spectral properties:
+// Main lobe FWHM = 0.59 / radius
+// Main lobe energy / total energy = 0.99495
+// Highest sidelobe = -23.0dB
+class SqrtHannWindow: public WindowFunction {
+ public:
+  explicit SqrtHannWindow(double radius = 1.0): WindowFunction(radius) {}
+
+  double Eval(double x) const override;
+  double EvalFourierTransform(double f) const override;
+  bool zero_at_endpoints() const override { return true; }
+  std::string name() const override { return "SqrtHann"; }
 };
 
 // KaiserWindow implements the Kaiser (aka Kaiser-Bessel) window
