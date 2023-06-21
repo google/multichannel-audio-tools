@@ -198,6 +198,15 @@ double Sinhc(double x) {
 }
 }  // namespace
 
+double RectangularWindow::Eval(double x) const {
+  constexpr double kTol = 1e-12;
+  return (std::abs(x) < (1.0 + kTol) * radius()) ? 1.0 : 0.0;
+}
+
+double RectangularWindow::EvalFourierTransform(double f) const {
+  return 2.0 * radius() * Sinc(2.0 * M_PI * f * radius());
+}
+
 double CosineWindow::Eval(double x) const {
   const double y = std::abs(x / radius());
   return (y < 1.0) ? cos((M_PI / 2.0) * y) : 0.0;
@@ -253,22 +262,6 @@ double HannWindow::EvalFourierTransform(double f) const {
     return radius() * Sinc(M_PI * g) / denom;
   } else {
     return radius() * 0.5;  // Handle removable singularity at g = 1.
-  }
-}
-
-double SqrtHannWindow::Eval(double x) const {
-  const double y = std::abs(x / radius());
-  return (y < 1.0) ? std::cos((M_PI / 2) * y) : 0.0;
-}
-
-double SqrtHannWindow::EvalFourierTransform(double f) const {
-  constexpr double kTol = 1e-8;
-  const double g = 2.0 * f * radius();
-  const double denom = M_PI * (0.25 - g * g);
-  if (std::abs(denom) >= kTol) {
-    return radius() * std::cos(M_PI * g) / denom;
-  } else {
-    return radius();  // Handle removable singularity at g = 1/2.
   }
 }
 

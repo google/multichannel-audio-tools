@@ -137,6 +137,24 @@ class WindowFunction {
   mutable std::vector<double> memoized_samples_;
 };
 
+// RectangularWindow implements the rectangular window (aka Dirichlet window)
+//   w(x) = 1 for |x| <= radius and 0 otherwise.
+// This is a crude and simple window, but included here for completeness.
+//
+// Spectral properties:
+// Main lobe FWHM = 0.44 / radius
+// Main lobe energy ratio = 0.9028
+// Highest sidelobe = -13.26dB
+class RectangularWindow: public WindowFunction {
+ public:
+  explicit RectangularWindow(double radius = 1.0): WindowFunction(radius) {}
+
+  double Eval(double x) const override;
+  double EvalFourierTransform(double f) const override;
+  bool zero_at_endpoints() const override { return false; }
+  std::string name() const override { return "rectangular"; }
+};
+
 // CosineWindow implements the cosine (aka sine) window
 //   w(x) = cos((pi/2) x/radius) for |x| <= radius,
 // or equivalently
@@ -157,6 +175,10 @@ class CosineWindow: public WindowFunction {
   bool zero_at_endpoints() const override { return true; }
   std::string name() const override { return "cosine"; }
 };
+
+// The cosine window is also the square root of the Hann window,
+//   w(x) = sqrt(HannWindow(radius).Eval(x)).
+using SqrtHannWindow = CosineWindow;
 
 // HammingWindow implements the Hamming window
 //   w(x) = 0.54 + 0.46 cos(pi x/radius) for |x| <= radius,
@@ -199,24 +221,6 @@ class HannWindow: public WindowFunction {
   double EvalFourierTransform(double f) const override;
   bool zero_at_endpoints() const override { return true; }
   std::string name() const override { return "Hann"; }
-};
-
-// SqrtHannWindow implements square root of the Hann window
-//   w(x) = cos((pi/2) x/radius) for |x| <= radius,
-// or equivalently w(x) = sqrt(HannWindow(radius).Eval(x)).
-//
-// Spectral properties:
-// Main lobe FWHM = 0.59 / radius
-// Main lobe energy / total energy = 0.99495
-// Highest sidelobe = -23.0dB
-class SqrtHannWindow: public WindowFunction {
- public:
-  explicit SqrtHannWindow(double radius = 1.0): WindowFunction(radius) {}
-
-  double Eval(double x) const override;
-  double EvalFourierTransform(double f) const override;
-  bool zero_at_endpoints() const override { return true; }
-  std::string name() const override { return "SqrtHann"; }
 };
 
 // KaiserWindow implements the Kaiser (aka Kaiser-Bessel) window
