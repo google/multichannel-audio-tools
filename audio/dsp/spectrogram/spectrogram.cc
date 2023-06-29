@@ -86,11 +86,11 @@ bool Spectrogram::ComputeComplexSpectrogram(
                << "to Initialize().";
     return false;
   }
-  CHECK(output);
+  CHECK(output != nullptr);
   output->clear();
   int input_start = 0;
   while (GetNextWindowOfSamples(input, &input_start)) {
-    DCHECK_EQ(input_queue_.size(), window_length_);
+    DCHECK_EQ(window_length_, static_cast<int>(input_queue_.size()));
     ProcessCoreFFT();  // Processes input_queue_ to fft_input_output_.
     // Add a new slice vector onto the output, to save new result to.
     output->resize(output->size() + 1);
@@ -140,7 +140,7 @@ bool Spectrogram::ComputeSquaredMagnitudeSpectrogram(
   output->clear();
   int input_start = 0;
   while (GetNextWindowOfSamples(input, &input_start)) {
-    DCHECK_EQ(input_queue_.size(), window_length_);
+    DCHECK_EQ(window_length_, static_cast<int>(input_queue_.size()));
     ProcessCoreFFT();  // Processes input_queue_ to fft_input_output_.
     // Add a new slice vector onto the output, to save new result to.
     output->resize(output->size() + 1);
@@ -237,7 +237,7 @@ bool Spectrogram::GetNextWindowOfSamples(const vector<InputSample>& input,
     input_queue_.erase(input_queue_.begin(),
                        input_queue_.begin() +
                        input_queue_.size() - window_length_);
-    DCHECK_EQ(window_length_, input_queue_.size());
+    DCHECK_EQ(window_length_, static_cast<int>(input_queue_.size()));
     samples_to_next_step_ = step_length_;  // Be ready for next time.
     return true;  // Yes, input_queue_ now contains exactly a window-full.
   }
