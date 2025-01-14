@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <limits>
 #include <string>
 
 using std::string;
@@ -42,7 +43,7 @@ template<typename T> struct MathLimits {
 
 
 template <> struct MathLimits<float> {
-  static constexpr float kNaN = NAN;
+  static constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
   static constexpr float kPosInf = HUGE_VALF;
   static constexpr float kNegInf = -HUGE_VALF;
 };
