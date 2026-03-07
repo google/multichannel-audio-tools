@@ -67,6 +67,29 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "spectrogram_test",
+    size = "small",
+    srcs = ["spectrogram_test.cc"],
+    data = [
+        "//audio/dsp/spectrogram/testdata:short_test_segment.wav",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_spectrogram.csv",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_spectrogram_1024_fft.csv",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_spectrogram_400_200.csv",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_spectrogram_hann.csv",
+    ],
+    deps = [
+        ":spectrogram",
+        ":test_file_utils",
+        "//audio/dsp:window_functions",
+        "//third_party/eigen3:eigen3",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:check",
+        "@com_github_glog_glog//:glog",
+        "@gtest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "test_file_utils",
     srcs = ["test_file_utils.cc"],
