@@ -30,8 +30,9 @@
 #define AUDIO_DSP_SPECTROGRAM_INVERSE_SPECTROGRAM_H_
 
 #include <complex>
-#include <deque>
 #include <vector>
+
+#include "third_party/eigen3/Eigen/Core"
 
 namespace audio_dsp {
 
@@ -41,9 +42,9 @@ class InverseSpectrogram {
   // Constructs a window that is equal to the forward window with a further
   // pointwise amplitude correction.
   // Args:
-  //  - forward_window: should be the same window used for the forward transform
+  //  - analysis_window: should be the same window used in the forward transform
   //  (Spectrogram).
-  //  - step_length: should be the same step length used for the forward
+  //  - step_length: should be the same step length usef for the forward
   //  transform (Spectrogram).
   // Returns a window suitable for reconstruction original waveform, assuming it
   // was supplied to this class's Initialize method.
@@ -51,9 +52,9 @@ class InverseSpectrogram {
   static std::vector<double> GenerateSynthesisWindow(
       const std::vector<double>& analysis_window, int step_length);
 
-  InverseSpectrogram() : initialized_(false),
-                         at_least_one_frame_processed_(false) {}
-  ~InverseSpectrogram() {}
+  InverseSpectrogram()
+      : initialized_(false), at_least_one_frame_processed_(false) {}
+  ~InverseSpectrogram() = default;
 
   // Initializes the class to expect input spectrogram data generated
   // with a given FFT length and step length (both in samples).
@@ -77,9 +78,14 @@ class InverseSpectrogram {
   // The template is instantiated for the 4 combinations of float and
   // double input and output samples.  It always goes from complex spectrum
   // input to real waveform output.
-  template <class InputSample, class OutputSample>
-  bool Process(const std::vector<std::vector<std::complex<InputSample>>>& input,
-               std::vector<OutputSample>* output);
+  //
+  // InputContainer must be one of
+  //   - vector<vector<complex<float>>>,
+  //   - vector<vector<complex<double>>>,
+  //   - Eigen::MatrixXcf.
+  // OutputSample must be either float or double.
+  template <class InputContainer, class OutputSample>
+  bool Process(const InputContainer& input, std::vector<OutputSample>* output);
 
   // After the end of a sequence of frames has been processed by
   // Process(), any remaining audio data buffered internally by the
@@ -90,7 +96,7 @@ class InverseSpectrogram {
   template <class OutputSample>
   bool Flush(std::vector<OutputSample>* output);
 
- protected:
+ private:
   // Initializes the class assuming that the fft_length_, frame_size_ and
   // step_length_ have been initialized and are valid values.
   bool InternalInitialize();
@@ -100,7 +106,6 @@ class InverseSpectrogram {
   // window is padded with zeros to fill the whole FFT length.
   double WindowValue(int sample_number) const;
 
- private:
   void ProcessCoreFFT();
 
   int fft_length_;
@@ -113,9 +118,9 @@ class InverseSpectrogram {
   bool with_window_function_;
   // Used as a synthesis window (after the inverse-FFT). For weighted overlap
   // add (WOLA).
-  std::vector<double> window_function_;
-  std::vector<double> fft_input_output_;
-  std::deque<double>
+  Eigen::ArrayXd window_function_;
+  Eigen::ArrayXd fft_input_output_;
+  std::vector<double>
       working_output_;  // A queue to do waveform overlap-add into.
 
   // Working data areas for the FFT routines.
@@ -129,3 +134,4 @@ class InverseSpectrogram {
 }  // namespace audio_dsp
 
 #endif  // AUDIO_DSP_SPECTROGRAM_INVERSE_SPECTROGRAM_H_
+

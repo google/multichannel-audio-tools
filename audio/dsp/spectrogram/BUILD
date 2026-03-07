@@ -13,9 +13,9 @@
 # limitations under the License.
 
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
-
 
 cc_library(
     name = "inverse_spectrogram",
@@ -29,6 +29,31 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "inverse_spectrogram_test",
+    size = "small",
+    srcs = ["inverse_spectrogram_test.cc"],
+    data = [
+        "//audio/dsp/spectrogram/testdata:short_test_segment.wav",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_reconstructed.wav",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_reconstructed_hann.wav",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_spectrogram.csv",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_spectrogram_1024_fft.csv",
+        "//audio/dsp/spectrogram/testdata:short_test_segment_spectrogram_hann.csv",
+    ],
+    deps = [
+        ":inverse_spectrogram",
+        ":spectrogram",
+        ":test_file_utils",
+        "//audio/dsp:window_functions",
+        "//third_party/eigen3:eigen3",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:check",
+        "@com_github_glog_glog//:glog",
+        "@gtest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "spectrogram",
     srcs = ["spectrogram.cc"],
@@ -38,6 +63,19 @@ cc_library(
         "//audio/dsp:porting",
         "//audio/dsp:window_functions",
         "//third_party/fft2d:fft2d",
+        "@com_github_glog_glog//:glog",
+    ],
+)
+
+cc_library(
+    name = "test_file_utils",
+    srcs = ["test_file_utils.cc"],
+    hdrs = ["test_file_utils.h"],
+    deps = [
+        "//audio/dsp/portable:read_wav_file",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
         "@com_github_glog_glog//:glog",
     ],
 )
