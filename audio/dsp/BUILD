@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google LLC
+# Copyright 2020-2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,9 @@
 
 # Description:
 #   DSP tools for processing audio.
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -100,8 +103,8 @@ cc_test(
     deps = [
         ":circular_buffer",
         "@com_github_glog_glog//:glog",
-        "@gtest//:gtest_main",
         "@com_google_absl//absl/types:span",
+        "@gtest//:gtest_main",
     ],
 )
 
@@ -133,11 +136,11 @@ cc_library(
     hdrs = ["eigen_types.h"],
     deps = [
         ":porting",
+        "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/types:span",
-        "//third_party/eigen3",
     ],
 )
 
@@ -146,8 +149,8 @@ cc_test(
     size = "small",
     srcs = ["eigen_types_test.cc"],
     deps = [
-        ":porting",
         ":eigen_types",
+        ":porting",
         ":testing_util",
         "@gtest//:gtest_main",
     ],
@@ -210,8 +213,8 @@ cc_library(
     hdrs = ["fixed_delay_line.h"],
     deps = [
         ":porting",
-        "@com_github_glog_glog//:glog",
         "//third_party/eigen3",
+        "@com_github_glog_glog//:glog",
     ],
 )
 
@@ -222,8 +225,8 @@ cc_test(
         ":fixed_delay_line",
         ":porting",
         ":testing_util",
-        "@gtest//:gtest_main",
         "//third_party/eigen3",
+        "@gtest//:gtest_main",
     ],
 )
 
@@ -233,8 +236,8 @@ cc_library(
     hdrs = ["kiss_fft.h"],
     deps = [
         ":porting",
-        "@com_github_glog_glog//:glog",
         "//third_party/kissfft:kiss_fft_float",
+        "@com_github_glog_glog//:glog",
     ],
 )
 
@@ -319,10 +322,10 @@ cc_library(
         ":porting",
         ":resampler",
         ":types",
-        "@com_google_absl//absl/meta:type_traits",
-        "@com_google_absl//absl/types:span",
         "//audio/dsp/portable:rational_factor_resampler_kernel",
         "//third_party/eigen3",
+        "@com_google_absl//absl/meta:type_traits",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
@@ -344,13 +347,13 @@ cc_test(
         ":signal_vector_util",
         ":testing_util",
         "//audio/dsp/portable:rational_factor_resampler_kernel",
+        "//third_party/eigen3",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/meta:type_traits",
-        "@com_google_absl//absl/types:span",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
         "@gtest//:gtest_main",
-        "//third_party/eigen3",
     ],
 )
 
@@ -359,15 +362,15 @@ cc_library(
     srcs = ["resampler_rational_factor.cc"],
     hdrs = ["resampler_rational_factor.h"],
     deprecation = "RationalFactorResampler is superseded by QResampler. " +
-        "Please see migration notes at the top of resampler_rational_factor.h.",
+                  "Please see migration notes at the top of resampler_rational_factor.h.",
     deps = [
         ":bessel_functions",
         ":number_util",
         ":porting",
         ":resampler",
         ":types",
-        "@com_google_absl//absl/types:span",
         "//third_party/eigen3",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
@@ -416,12 +419,12 @@ cc_test(
 
 cc_library(
     name = "signal_generator",
-    hdrs = ["signal_generator.h"],
     srcs = ["signal_generator.cc"],
+    hdrs = ["signal_generator.h"],
     deps = [
         ":porting",
-        "@com_github_glog_glog//:glog",
         "//third_party/eigen3",
+        "@com_github_glog_glog//:glog",
     ],
 )
 
@@ -450,7 +453,6 @@ cc_library(
     ],
 )
 
-
 cc_library(
     name = "spectral_processor",
     srcs = ["spectral_processor.cc"],
@@ -459,9 +461,9 @@ cc_library(
         ":circular_buffer",
         ":kiss_fft",
         ":number_util",
+        "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
         "@com_google_absl//absl/types:span",
-        "//third_party/eigen3",
     ],
 )
 
@@ -494,7 +496,7 @@ cc_library(
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
         "@com_google_absl//absl/types:span",
-        "@gtest//:gtest",
+        "@gtest",
     ],
 )
 
@@ -528,8 +530,8 @@ cc_test(
     deps = [
         ":porting",
         ":types",
-        "@gtest//:gtest_main",
         "@com_google_absl//absl/memory",
+        "@gtest//:gtest_main",
     ],
 )
 

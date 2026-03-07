@@ -90,6 +90,10 @@ template <typename Scalar>
 Eigen::Array<Scalar, Eigen::Dynamic, 1> GenerateWhiteGaussianNoise(
     int n, Scalar mean, Scalar stddev) {
   Eigen::Array<Scalar, Eigen::Dynamic, 1> noise(n);
+  if (stddev == Scalar(0)) {
+    noise.setConstant(mean);
+    return noise;
+  }
   std::mt19937 gen(0 /* seed */);
   std::normal_distribution<Scalar> d(mean, stddev);
   for (int i = 0; i < n; ++i) {
