@@ -22,6 +22,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/base/optimization.h"
 #include "absl/meta/type_traits.h"
 #include "absl/types/span.h"
@@ -36,16 +37,17 @@ namespace audio_dsp {
 template <typename EigenType>
 auto TransposeToRowVector(
     EigenType&& x,
-    typename std::enable_if<  // If `x` is a column vector at compile time.
-        absl::decay_t<EigenType>::ColsAtCompileTime == 1>::type* = nullptr)
-    -> decltype(x.transpose()) {
+    typename std::enable_if_t<  // If `x` is a column vector at compile time.
+        std::decay_t<EigenType>::ColsAtCompileTime == 1>* absl_nullable =
+        nullptr) {
   return x.transpose();  // Return Eigen::Transpose expression object by value.
 }
 template <typename EigenType>
 EigenType&& TransposeToRowVector(
     EigenType&& x,
-    typename std::enable_if<  // If `x` is not a column vector.
-        absl::decay_t<EigenType>::ColsAtCompileTime != 1>::type* = nullptr) {
+    typename std::enable_if_t<  // If `x` is not a column vector.
+        std::decay_t<EigenType>::ColsAtCompileTime != 1>* absl_nullable =
+        nullptr) {
   return std::forward<EigenType>(x);  // Forward the object without change.
 }
 
