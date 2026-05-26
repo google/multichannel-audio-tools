@@ -244,6 +244,8 @@ cc_library(
     srcs = ["fir_filter.cc"],
     hdrs = ["fir_filter.h"],
     deps = [
+        "//audio/dsp:decibels",
+        "//audio/dsp:window_functions",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
     ],
@@ -255,6 +257,8 @@ cc_test(
     srcs = ["fir_filter_test.cc"],
     deps = [
         ":fir_filter",
+        "//audio/dsp:decibels",
+        "//audio/dsp:kiss_fft",
         "//audio/dsp:testing_util",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
