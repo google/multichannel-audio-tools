@@ -283,7 +283,7 @@ class CrossProductRange {
     // Construct "end" iterator.
     Iterator(): is_end_(true) {}
     // Construct iterator at a specified flat index.
-    Iterator(const CrossProductRange& range, int64 flat_index);
+    Iterator(const CrossProductRange& range, int64_t flat_index);
 
     // Get the current iterate, a vector of indices of size shape.size(). The
     // first index changes fastest between successive iterates.
@@ -308,7 +308,7 @@ class CrossProductRange {
 
   // Get iterator at a specified flat index. FlatIndex(n) is equivalent to (but
   // more efficient than) creating a begin() iterator and incrementing n times.
-  Iterator FlatIndex(int64 flat_index) const {
+  Iterator FlatIndex(int64_t flat_index) const {
     return Iterator(*this, flat_index);
   }
 

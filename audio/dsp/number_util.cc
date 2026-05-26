@@ -304,7 +304,7 @@ CrossProductRange::Iterator::Iterator(const CrossProductRange& range)
       is_end_(range.empty()) {}
 
 CrossProductRange::Iterator::Iterator(const CrossProductRange& range,
-                                      int64 flat_index)
+                                      int64_t flat_index)
     : Iterator(range) {
   if (!is_end_) {
     for (int i = 0; i < shape_.size() - 1; ++i) {

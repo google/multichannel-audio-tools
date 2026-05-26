@@ -445,7 +445,7 @@ class QResampler
       return 0;
     }
     return static_cast<int>(
-        (static_cast<int64>(min_consumed_input) * factor_denominator() -
+        (static_cast<int64_t>(min_consumed_input) * factor_denominator() -
          phase_ + factor_numerator() - 1) /
         factor_numerator());
   }
@@ -473,7 +473,7 @@ class QResampler
       return 0;
     }
     return static_cast<int>(
-               (static_cast<int64>(num_output_frames - 1) * factor_numerator() +
+               (static_cast<int64_t>(num_output_frames - 1) * factor_numerator() +
                 phase_) /
                factor_denominator()) +
            filters_.num_taps() - delayed_input_frames_;
@@ -825,7 +825,7 @@ class QResamplerFilters {
   // Gets the max possible output size for the given max input size.
   int MaxOutputFrames(int max_input_frames) const {
     return static_cast<int>(
-        (static_cast<int64>(max_input_frames) * factor_denominator_ +
+        (static_cast<int64_t>(max_input_frames) * factor_denominator_ +
          factor_numerator_ - 1) /
         factor_numerator_);
   }
@@ -836,7 +836,7 @@ class QResamplerFilters {
       return 0;
     }
     return static_cast<int>(
-               (static_cast<int64>(num_output_frames - 1) * factor_numerator_ +
+               (static_cast<int64_t>(num_output_frames - 1) * factor_numerator_ +
                 factor_denominator_ - 1) /
                factor_denominator_) +
            num_taps_;

@@ -25,11 +25,6 @@
 
 using std::string;
 
-typedef uint8_t uint8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-
 #define ABSL_DIE_IF_NULL CHECK_NOTNULL
 
 

@@ -60,7 +60,7 @@ template <typename TypeParam>
 class SignalGeneratorTypedTest : public ::testing::Test {};
 
 // Different arithmetic ValueType types to test.
-typedef ::testing::Types<float, double, int16, int32, int64> TestTypes;
+typedef ::testing::Types<float, double, int16_t, int32_t, int64_t> TestTypes;
 TYPED_TEST_SUITE(SignalGeneratorTypedTest, TestTypes);
 
 // Test SignalGenerator for different template args.

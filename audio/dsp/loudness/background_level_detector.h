@@ -168,7 +168,7 @@ class BackgroundLevelDetector {
   // There is an initial burn-in period in which the background filter moves
   // much faster to forget the zero initial condition and move toward the signal
   // level.
-  std::vector<uint8 /* bool */> burn_in_stage_;
+  std::vector<uint8_t /* bool */> burn_in_stage_;
   float burn_in_background_coeff_;
 };
 }  // namespace audio_dsp
