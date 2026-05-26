@@ -76,7 +76,7 @@ bool Demangle(const char *mangled, char *out, int out_size) {
   return true;
 }
 
-string Demangle(const char *mangled) {
+std::string Demangle(const char *mangled) {
   return {};
 }
 }  // namespace util

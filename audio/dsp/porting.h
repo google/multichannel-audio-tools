@@ -23,10 +23,7 @@
 #include <limits>
 #include <string>
 
-using std::string;
-
 #define ABSL_DIE_IF_NULL CHECK_NOTNULL
-
 
 template<typename T> struct MathLimits {
   // Not a number, i.e. result of 0/0.
@@ -36,7 +33,6 @@ template<typename T> struct MathLimits {
   // Negative infinity, i.e. result of -1/0.
   static const T kNegInf;
 };
-
 
 template <> struct MathLimits<float> {
   static constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
@@ -55,13 +51,12 @@ class MathUtil {
                                                  long double *r2);
 };
 
-
 // TODO: glog actually includes a demangler function, but it isn't obvious how
 //       to access it with our BUILD setup.
 namespace util {
 // Note that these don't do any demangling in the open source code.
 bool Demangle(const char *mangled, char *out, int out_size);
-string Demangle(const char* mangled);
+std::string Demangle(const char* mangled);
 }  // namespace util
 
 #endif  // AUDIO_DSP_OPEN_SOURCE_PORTING_H_
