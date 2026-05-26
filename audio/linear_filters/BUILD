@@ -63,6 +63,7 @@ cc_library(
         "//audio/dsp:porting",
         "@com_github_glog_glog//:glog",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
