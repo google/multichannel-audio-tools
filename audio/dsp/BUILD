@@ -545,3 +545,17 @@ cc_library(
         ":porting",
     ],
 )
+
+cc_test(
+    name = "window_functions_test",
+    size = "small",
+    srcs = ["window_functions_test.cc"],
+    deps = [
+        ":kiss_fft",
+        ":signal_vector_util",
+        ":testing_util",
+        ":window_functions",
+        "@com_google_absl//absl/strings",
+        "@gtest//:gtest_main",
+    ],
+)
