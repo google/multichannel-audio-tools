@@ -25,21 +25,6 @@
 
 #define ABSL_DIE_IF_NULL CHECK_NOTNULL
 
-template<typename T> struct MathLimits {
-  // Not a number, i.e. result of 0/0.
-  static const T kNaN;
-  // Positive infinity, i.e. result of 1/0.
-  static const T kPosInf;
-  // Negative infinity, i.e. result of -1/0.
-  static const T kNegInf;
-};
-
-template <> struct MathLimits<float> {
-  static constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
-  static constexpr float kPosInf = HUGE_VALF;
-  static constexpr float kNegInf = -HUGE_VALF;
-};
-
 class MathUtil {
  public:
   enum QuadraticRootType {kNoRealRoots = 0, kAmbiguous = 1, kTwoRealRoots = 2};
