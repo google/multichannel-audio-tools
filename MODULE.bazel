@@ -63,3 +63,13 @@ new_git_repository(
     remote = "https://github.com/mborgerding/kissfft.git",
     tag = "v131",
 )
+
+# ===== pffft =====
+http_archive(
+    name = "pffft_archive",
+    build_file = "//third_party:pffft.BUILD",
+    strip_prefix = "pffft-master",
+    urls = [
+        "https://github.com/marton78/pffft/archive/refs/heads/master.tar.gz",
+    ],
+)

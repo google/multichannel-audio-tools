@@ -325,7 +325,7 @@ TEST(SpectrogramTest, ComputedComplexDataAgreeWithMatlab) {
         absl::GetFlag(FLAGS_spectrogram_dump_file), output));
   }
   if (!absl::GetFlag(FLAGS_window_dump_file).empty()) {
-    const std::vector<double>& window = sgram.GetWindow();
+    const auto& window = sgram.GetWindow();
     CHECK(WriteDoubleVectorToFile(
         absl::GetFlag(FLAGS_window_dump_file), window));
   }

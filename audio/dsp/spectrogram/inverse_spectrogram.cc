@@ -18,35 +18,146 @@
 
 #include <cmath>
 #include <complex>
+#include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "audio/dsp/number_util.h"
 #include "glog/logging.h"
 #include "third_party/eigen3/Eigen/Core"
 #include "third_party/fft2d/fft.h"
+#include "third_party/pffft/src/pffft.h"
+
+#include "audio/dsp/porting.h"  // auto-added.
 
 namespace audio_dsp {
 
-std::vector<double> InverseSpectrogram::GenerateSynthesisWindow(
-    const std::vector<double>& analysis_window, int step_length) {
+namespace internal {
+InverseSpectrogramFftImpl<float>::InverseSpectrogramFftImpl(int fft_length) {
+  setup = pffft_new_setup(fft_length, PFFFT_REAL);
+  CHECK(setup) << "pffft_new_setup failed for fft_length " << fft_length;
+  pffft_in =
+      static_cast<float*>(pffft_aligned_malloc(fft_length * sizeof(float)));
+  pffft_out =
+      static_cast<float*>(pffft_aligned_malloc(fft_length * sizeof(float)));
+  fft_input_output.resize(fft_length);
+}
+
+InverseSpectrogramFftImpl<float>::~InverseSpectrogramFftImpl() {
+  pffft_destroy_setup(setup);
+  pffft_aligned_free(pffft_in);
+  pffft_aligned_free(pffft_out);
+}
+
+template <typename Slice>
+void InverseSpectrogramFftImpl<float>::Process(
+    const Slice& slice, int fft_length, int frame_size, int overlap,
+    bool with_window_function, const Eigen::ArrayXf& window_function,
+    std::vector<float>& working_output) {
+  // pffft_transform_ordered with PFFFT_REAL and PFFFT_BACKWARD expects N
+  // floats in the format [R0, Rn/2, R1, I1, R2, I2, ..., Rn/2-1, In/2-1].
+  // The input slice is in the format [R0, I0, R1, I1, ..., Rn/2, In/2],
+  // where I0 and In/2 are 0.
+  // We also need to conjugate the input to match the original behavior.
+  pffft_in[0] = static_cast<std::complex<float>>(slice[0]).real();
+  pffft_in[1] = static_cast<std::complex<float>>(slice[fft_length / 2]).real();
+  for (int i = 1; i < fft_length / 2; ++i) {
+    std::complex<float> c =
+        std::conj(static_cast<std::complex<float>>(slice[i]));
+    pffft_in[2 * i] = c.real();
+    pffft_in[2 * i + 1] = c.imag();
+  }
+
+  pffft_transform_ordered(setup, pffft_in, pffft_out, nullptr, PFFFT_BACKWARD);
+
+  for (int i = 0; i < fft_length; ++i) {
+    fft_input_output[i] = pffft_out[i];
+  }
+
+  if (with_window_function) {
+    fft_input_output.head(frame_size) *= window_function;
+    fft_input_output.head(frame_size) *= 0.5f;
+  } else {
+    const float full_fft_length = static_cast<float>(fft_length);
+    fft_input_output.head(frame_size) /= full_fft_length;
+  }
+
+  Eigen::Map<Eigen::ArrayXf>(working_output.data(), working_output.size()) +=
+      fft_input_output.head(overlap);
+  auto new_portion = fft_input_output.segment(overlap, frame_size - overlap);
+  working_output.insert(working_output.end(), new_portion.begin(),
+                        new_portion.end());
+}
+
+InverseSpectrogramFftImpl<double>::InverseSpectrogramFftImpl(int fft_length) {
+  fft_input_output.resize(fft_length);
+  int half_fft_length = fft_length / 2;
+  fft_double_working_area.assign(half_fft_length, 0.0);
+  integer_working_area.assign(2 + static_cast<int>(sqrt(half_fft_length)), 0);
+  // Set flag element to ensure that the working areas are initialized
+  // on the first call to cdft (redundant given the assign above, but leaving
+  // it here as a reminder.
+  integer_working_area[0] = 0;
+}
+
+template <typename Slice>
+void InverseSpectrogramFftImpl<double>::Process(
+    const Slice& slice, int fft_length, int frame_size, int overlap,
+    bool with_window_function, const Eigen::ArrayXd& window_function,
+    std::vector<double>& working_output) {
+  using InputRealSample =
+      typename std::remove_reference_t<decltype(slice[0])>::value_type;
+  fft_input_output[0] = std::real(slice[0]);
+  fft_input_output[1] = std::real(slice[fft_length / 2]);
+  fft_input_output.tail(fft_length - 2) =
+      Eigen::Map<const Eigen::Array<InputRealSample, Eigen::Dynamic, 1>>(
+          reinterpret_cast<const InputRealSample*>(slice.data() + 1),
+          fft_length - 2)
+          .template cast<double>();
+
+  constexpr int kReverseFFT = -1;
+  rdft(fft_length, kReverseFFT, fft_input_output.data(),
+       integer_working_area.data(), fft_double_working_area.data());
+
+  if (with_window_function) {
+    fft_input_output.head(frame_size) *= window_function;
+  } else {
+    const int half_fft_length = fft_length / 2;
+    fft_input_output.head(frame_size) /= half_fft_length;
+  }
+
+  Eigen::Map<Eigen::ArrayXd>(working_output.data(), working_output.size()) +=
+      fft_input_output.head(overlap);
+  auto new_portion = fft_input_output.segment(overlap, frame_size - overlap);
+  working_output.insert(working_output.end(), new_portion.begin(),
+                        new_portion.end());
+}
+
+}  // namespace internal
+
+using std::complex;
+
+template <typename Scalar>
+std::vector<Scalar> InverseSpectrogramT<Scalar>::GenerateSynthesisWindow(
+    const std::vector<Scalar>& analysis_window, int step_length) {
   const int frame_length = analysis_window.size();
   // Perfect reconstruction is not possible if the stft skips samples.
   DCHECK_LE(step_length, frame_length);
 
-  std::vector<double> result(analysis_window);
   // The result is just the original window, with a normalization so the sum of
   // each element with its overlapped elements would be one.
+  std::vector<Scalar> result(analysis_window);
   for (int i = 0; i < step_length; ++i) {
     // Calculate the normalization factor:
-    double denom = 0.0;
+    Scalar denom = 0.0;
     for (int offset = i; offset < analysis_window.size();
          offset += step_length) {
-      double window_element = analysis_window[offset];
+      Scalar window_element = analysis_window[offset];
       denom += window_element * window_element;
     }
 
     // Apply the normalization:
-    DCHECK_NE(denom, 0.0);  // Can't reconstruct if the weight is zero.
+    DCHECK_NE(denom, static_cast<Scalar>(0.0));
     for (int offset = i; offset < analysis_window.size();
          offset += step_length) {
       result[offset] /= denom;
@@ -55,16 +166,10 @@ std::vector<double> InverseSpectrogram::GenerateSynthesisWindow(
   return result;
 }
 
-bool InverseSpectrogram::InternalInitialize() {
-  fft_input_output_.resize(fft_length_);
-  int half_fft_length = fft_length_ / 2;
-  fft_double_working_area_.assign(half_fft_length, 0.0);
-  fft_integer_working_area_.assign(2 + static_cast<int>(sqrt(half_fft_length)),
-                                   0);
-  // Set flag element to ensure that the working areas are initialized
-  // on the first call to cdft (redundant given the assign above, but leaving
-  // it here as a reminder.
-  fft_integer_working_area_[0] = 0;
+template <typename Scalar>
+bool InverseSpectrogramT<Scalar>::InternalInitialize() {
+  fft_impl_ = std::make_unique<internal::InverseSpectrogramFftImpl<Scalar>>(
+      fft_length_);
 
   overlap_ = frame_size_ - step_length_;
   if (overlap_ < 0) {
@@ -79,7 +184,8 @@ bool InverseSpectrogram::InternalInitialize() {
   return true;
 }
 
-bool InverseSpectrogram::Initialize(int fft_length, int step_length) {
+template <typename Scalar>
+bool InverseSpectrogramT<Scalar>::Initialize(int fft_length, int step_length) {
   initialized_ = false;
   if (fft_length < 2) {
     LOG(ERROR) << "FFT length too short.";
@@ -92,6 +198,12 @@ bool InverseSpectrogram::Initialize(int fft_length, int step_length) {
   fft_length_ = fft_length;
   frame_size_ = fft_length;
 
+  if (std::is_same<Scalar, float>::value && fft_length_ < 32) {
+    LOG(ERROR) << "FFT length must be at least 32 for float implementation.";
+    initialized_ = false;
+    return false;
+  }
+
   if (step_length < 1) {
     LOG(ERROR) << "Step length must be positive.";
     return false;
@@ -103,8 +215,9 @@ bool InverseSpectrogram::Initialize(int fft_length, int step_length) {
   return InternalInitialize();
 }
 
-bool InverseSpectrogram::Initialize(const std::vector<double>& window,
-                                    int step_length) {
+template <typename Scalar>
+bool InverseSpectrogramT<Scalar>::Initialize(const std::vector<Scalar>& window,
+                                             int step_length) {
   initialized_ = false;
   if (window.size() < 2) {
     LOG(ERROR) << "Window length too short.";
@@ -113,11 +226,17 @@ bool InverseSpectrogram::Initialize(const std::vector<double>& window,
   frame_size_ = window.size();
   with_window_function_ = true;
   fft_length_ = NextPowerOfTwo(window.size());
+
+  if (std::is_same<Scalar, float>::value && fft_length_ < 32) {
+    LOG(ERROR) << "FFT length must be at least 32 for float implementation.";
+    initialized_ = false;
+    return false;
+  }
+
   const int half_fft_length = fft_length_ / 2;
   // Copy window.
-  window_function_ =
-      Eigen::Map<const Eigen::ArrayXd>(window.data(), window.size()) /
-      half_fft_length;
+  window_function_ = Eigen::Map<const ArrayX>(window.data(), window.size()) /
+                     static_cast<Scalar>(half_fft_length);
 
   if (step_length < 1) {
     LOG(ERROR) << "Step length must be positive.";
@@ -155,11 +274,10 @@ struct ContainerTraits<
   }
 };
 
+template <typename Scalar>
 template <class InputContainer, class OutputSample>
-bool InverseSpectrogram::Process(const InputContainer& input,
-                                 std::vector<OutputSample>* output) {
-  using InputSample = typename ContainerTraits<InputContainer>::RealScalar;
-
+bool InverseSpectrogramT<Scalar>::Process(const InputContainer& input,
+                                          std::vector<OutputSample>* output) {
   if (!initialized_) {
     LOG(ERROR) << "Process() called before successful call to Initialize().";
     return false;
@@ -180,17 +298,10 @@ bool InverseSpectrogram::Process(const InputContainer& input,
     // Check that slice is the right size for the complex-to-real inverse FFT.
     DCHECK_EQ(slice.size(), fft_length_ / 2 + 1);
 
-    fft_input_output_[0] = std::real(slice[0]);
-    // For rdft, put Nyquist-frequency real value into zero-frequency imag slot.
-    fft_input_output_[1] = std::real(slice[fft_length_ / 2]);
-    // Copy the rest of the slice.
-    fft_input_output_.tail(fft_length_ - 2) =
-        Eigen::Map<const Eigen::Array<InputSample, Eigen::Dynamic, 1>>(
-            reinterpret_cast<const InputSample*>(slice.data() + 1),
-            fft_length_ - 2)
-            // fft2d's rdft() expects doubles, so cast to double if needed.
-            .template cast<double>();
-    ProcessCoreFFT();
+    fft_impl_->Process(slice, fft_length_, frame_size_, overlap_,
+                       with_window_function_, window_function_,
+                       working_output_);
+
     int num_output_samples = working_output_.size() - overlap_;
     // Copy the done samples, converting to float if necessary.
     output->insert(output->end(), working_output_.begin(),
@@ -202,46 +313,10 @@ bool InverseSpectrogram::Process(const InputContainer& input,
   }
   return true;
 }
-// Instantiate it five ways:
-template bool InverseSpectrogram::Process(
-    const std::vector<std::vector<std::complex<float>>>&, std::vector<float>*);
-template bool InverseSpectrogram::Process(
-    const std::vector<std::vector<std::complex<double>>>&, std::vector<float>*);
-template bool InverseSpectrogram::Process(
-    const std::vector<std::vector<std::complex<float>>>&, std::vector<double>*);
-template bool InverseSpectrogram::Process(
-    const std::vector<std::vector<std::complex<double>>>&,
-    std::vector<double>*);
 
-template bool InverseSpectrogram::Process(const Eigen::MatrixXcf&,
-                                          std::vector<float>*);
-
-void InverseSpectrogram::ProcessCoreFFT() {
-  constexpr int kReverseFFT = -1;  // 1 means forward; -1 reverse.
-  rdft(fft_length_, kReverseFFT, fft_input_output_.data(),
-       fft_integer_working_area_.data(), fft_double_working_area_.data());
-
-  if (with_window_function_) {
-    // Apply the window, which includes the FFT normalization factor.
-    fft_input_output_.head(frame_size_) *= window_function_;
-  } else {
-    // Otherwise just apply the FFT normalization.
-    const int half_fft_length = fft_length_ / 2;
-    fft_input_output_.head(frame_size_) /= half_fft_length;
-  }
-
-  // Add the overlapping portion.
-  Eigen::Map<Eigen::ArrayXd>(working_output_.data(), working_output_.size()) +=
-      fft_input_output_.head(overlap_);
-  // Append the new portion.
-  auto new_portion =
-      fft_input_output_.segment(overlap_, frame_size_ - overlap_);
-  working_output_.insert(working_output_.end(), new_portion.begin(),
-                         new_portion.end());
-}
-
+template <typename Scalar>
 template <class OutputSample>
-bool InverseSpectrogram::Flush(std::vector<OutputSample>* output) {
+bool InverseSpectrogramT<Scalar>::Flush(std::vector<OutputSample>* output) {
   if (output) {
     if (at_least_one_frame_processed_) {
       output->assign(working_output_.begin(), working_output_.end());
@@ -257,8 +332,45 @@ bool InverseSpectrogram::Flush(std::vector<OutputSample>* output) {
   Initialize(fft_length_, step_length_);
   return true;
 }
-template bool InverseSpectrogram::Flush(std::vector<double>*);
-template bool InverseSpectrogram::Flush(std::vector<float>*);
+
+template class InverseSpectrogramT<float>;
+template class InverseSpectrogramT<double>;
+
+#define INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_INTERNAL(Scalar, Slice) \
+  template void internal::InverseSpectrogramFftImpl<Scalar>::Process(   \
+      const Slice&, int, int, int, bool,                                \
+      const Eigen::Array<Scalar, Eigen::Dynamic, 1>&, std::vector<Scalar>&);
+
+#define INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_IO(Scalar, Input, Output) \
+  template bool InverseSpectrogramT<Scalar>::Process(                     \
+      const std::vector<std::vector<std::complex<Input>>>&,               \
+      std::vector<Output>*);
+
+#define INSTANTIATE_INVERSE_SPECTROGRAM_METHODS(Scalar)                       \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_IO(Scalar, float, float)            \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_IO(Scalar, float, double)           \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_IO(Scalar, double, float)           \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_IO(Scalar, double, double)          \
+  template bool InverseSpectrogramT<Scalar>::Process(const Eigen::MatrixXcf&, \
+                                                     std::vector<float>*);    \
+  template bool InverseSpectrogramT<Scalar>::Process(const Eigen::MatrixXcf&, \
+                                                     std::vector<double>*);   \
+  template bool InverseSpectrogramT<Scalar>::Process(const Eigen::MatrixXcd&, \
+                                                     std::vector<float>*);    \
+  template bool InverseSpectrogramT<Scalar>::Process(const Eigen::MatrixXcd&, \
+                                                     std::vector<double>*);   \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_INTERNAL(                           \
+      Scalar, std::vector<std::complex<float>>)                               \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_INTERNAL(                           \
+      Scalar, std::vector<std::complex<double>>)                              \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_INTERNAL(                           \
+      Scalar, Eigen::MatrixXcf::ConstColXpr)                                  \
+  INSTANTIATE_INVERSE_SPECTROGRAM_METHODS_INTERNAL(                           \
+      Scalar, Eigen::MatrixXcd::ConstColXpr)                                  \
+  template bool InverseSpectrogramT<Scalar>::Flush(std::vector<double>*);     \
+  template bool InverseSpectrogramT<Scalar>::Flush(std::vector<float>*);
+
+INSTANTIATE_INVERSE_SPECTROGRAM_METHODS(float)
+INSTANTIATE_INVERSE_SPECTROGRAM_METHODS(double)
 
 }  // namespace audio_dsp
-

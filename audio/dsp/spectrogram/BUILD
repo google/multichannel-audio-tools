@@ -25,6 +25,7 @@ cc_library(
         "//audio/dsp:number_util",
         "//third_party/eigen3:eigen3",
         "//third_party/fft2d",
+        "//third_party/pffft:pffft",
         "@com_github_glog_glog//:glog",
     ],
 )
@@ -62,7 +63,9 @@ cc_library(
         "//audio/dsp:number_util",
         "//audio/dsp:porting",
         "//audio/dsp:window_functions",
+        "//third_party/eigen3:eigen3",
         "//third_party/fft2d:fft2d",
+        "//third_party/pffft:pffft",
         "@com_github_glog_glog//:glog",
     ],
 )
