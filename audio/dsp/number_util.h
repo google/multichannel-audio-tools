@@ -27,6 +27,7 @@
 
 
 #include "glog/logging.h"
+#include "absl/types/span.h"
 
 #include "audio/dsp/porting.h"  // auto-added.
 
@@ -50,7 +51,7 @@ int RoundUpToMultiple(int value, int factor);
 // 10-line function is essentially a copy of MathUtil::GCD() to avoid an
 // otherwise unneeded dependency on mobile platforms.
 int GreatestCommonDivisor(int a, int b);
-int GreatestCommonDivisor(const std::vector<int>& a);
+int GreatestCommonDivisor(absl::Span<const int> a);
 
 // Returns true if value is an integer power of 2 or zero.
 inline bool IsPowerOfTwoOrZero(unsigned value) {

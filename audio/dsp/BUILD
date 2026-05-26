@@ -287,6 +287,7 @@ cc_library(
         ":porting",
         "//audio/dsp/portable:number_util",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/types:span",
     ],
 )
 

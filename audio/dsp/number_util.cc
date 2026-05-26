@@ -16,6 +16,8 @@
 
 #include "audio/dsp/number_util.h"
 
+#include "absl/types/span.h"
+
 #include <cmath>
 #include <iomanip>
 #include <limits>
@@ -65,7 +67,7 @@ int GreatestCommonDivisor(int a, int b) {
   return a;
 }
 
-int GreatestCommonDivisor(const std::vector<int>& a) {
+int GreatestCommonDivisor(absl::Span<const int> a) {
   DCHECK_GE(a.size(), 1);
   int gcd = a[0];
   for (int i = 1; i < a.size(); ++i) {
