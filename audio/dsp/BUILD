@@ -465,9 +465,26 @@ cc_library(
         ":circular_buffer",
         ":kiss_fft",
         ":number_util",
+        ":window_functions",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "spectral_processor_test",
+    size = "small",
+    srcs = ["spectral_processor_test.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+        ":signal_generator",
+        ":spectral_processor",
+        ":testing_util",
+        ":window_functions",
+        "//third_party/eigen3",
+        "@gtest//:gtest_main",
     ],
 )
 
