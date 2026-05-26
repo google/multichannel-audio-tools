@@ -279,6 +279,7 @@ cc_library(
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
