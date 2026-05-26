@@ -425,6 +425,8 @@ cc_library(
     hdrs = ["signal_generator.h"],
     deps = [
         ":porting",
+        "//audio/linear_filters:biquad_filter",
+        "//audio/linear_filters:biquad_filter_coefficients",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
     ],

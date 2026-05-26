@@ -155,6 +155,16 @@ TEST(SignalGeneratorTest, GenerateWhiteGaussianNoise) {
     }
   }
 }
+TEST(SignalGeneratorTest, PinkNoiseRMSTest) {
+  for (int size : {10, 100, 4000}) {
+    for (float signal_rms : {0.1f, 1.0f, 10.0f}) {
+      Eigen::ArrayXf pink = GeneratePinkNoise(size, signal_rms);
+      ASSERT_EQ(pink.size(), size);
+      // Test the RMS.
+      ASSERT_NEAR(std::sqrt(pink.square().mean()), signal_rms, 1e-5f);
+    }
+  }
+}
 
 }  // namespace
 }  // namespace audio_dsp

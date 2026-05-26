@@ -49,6 +49,13 @@ class MathUtil {
                                                  long double c,
                                                  long double *r1,
                                                  long double *r2);
+
+  static bool RealRootsForCubic(long double a,
+                                long double b,
+                                long double c,
+                                long double *r1,
+                                long double *r2,
+                                long double *r3);
 };
 
 // TODO: glog actually includes a demangler function, but it isn't obvious how
