@@ -27,9 +27,11 @@ cc_library(
     hdrs = ["background_level_detector.h"],
     deps = [
         "//audio/dsp:decibels",
+        "//audio/dsp:eigen_types",
         "//audio/dsp:envelope_detector",
         "//audio/linear_filters:biquad_filter",
         "//audio/linear_filters:biquad_filter_design",
+        "//audio/linear_filters:discretization",
         "//audio/linear_filters:ladder_filter",
         "//audio/linear_filters:perceptual_filter_design",
         "@com_github_glog_glog//:glog",
@@ -65,6 +67,9 @@ cc_library(
         "//audio/linear_filters:discretization",
         "//audio/linear_filters:perceptual_filter_design",
         "@com_github_glog_glog//:glog",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "//third_party/eigen3",
     ],
 )
 
@@ -76,6 +81,7 @@ cc_test(
         ":streaming_loudness_1771",
         "//audio/dsp:decibels",
         "//audio/dsp:signal_generator",
+        "@com_google_absl//absl/status:statusor",
         "@gtest//:gtest_main",
         "//third_party/eigen3",
     ],
