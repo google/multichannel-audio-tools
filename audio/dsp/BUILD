@@ -87,6 +87,19 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "batch_top_n_test",
+    size = "small",
+    srcs = ["batch_top_n_test.cc"],
+    copts = ["-Iexternal/gtest/include"],
+    deps = [
+        ":batch_top_n",
+        ":testing_util",
+        "//third_party/eigen3",
+        "@gtest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "circular_buffer",
     hdrs = ["circular_buffer.h"],
