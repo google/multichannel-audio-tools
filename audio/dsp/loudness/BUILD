@@ -86,3 +86,18 @@ cc_test(
         "//third_party/eigen3",
     ],
 )
+
+cc_test(
+    name = "loudness_1771_two_way_compressor_test",
+    size = "small",
+    srcs = ["loudness_1771_two_way_compressor_test.cc"],
+    deps = [
+        ":loudness_1771_two_way_compressor",
+        "//audio/dsp:decibels",
+        "//audio/dsp:testing_util",
+        "//audio/dsp/hifi:dynamic_range_control_functions",
+        "//audio/dsp/loudness:streaming_loudness_1771",
+        "@gtest//:gtest_main",
+        "//third_party/eigen3",
+    ],
+)

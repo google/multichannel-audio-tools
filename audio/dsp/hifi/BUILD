@@ -21,7 +21,24 @@ package(
 
 cc_library(
     name = "dynamic_range_control_functions",
+    srcs = ["dynamic_range_control_functions.cc"],
     hdrs = ["dynamic_range_control_functions.h"],
+    deps = [
+        "@com_github_glog_glog//:glog",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_test(
+    name = "dynamic_range_control_functions_test",
+    size = "small",
+    srcs = ["dynamic_range_control_functions_test.cc"],
+    deps = [
+        ":dynamic_range_control_functions",
+        "//audio/dsp:testing_util",
+        "//third_party/eigen3",
+        "@gtest//:gtest_main",
+    ],
 )
 
 cc_library(
