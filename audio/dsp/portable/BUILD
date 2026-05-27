@@ -312,6 +312,7 @@ c_test(
 
 c_library(
     name = "serialize",
+    srcs = ["serialize.c"],
     hdrs = ["serialize.h"],
 )
 
@@ -328,7 +329,10 @@ c_library(
     name = "write_wav_file",
     srcs = ["write_wav_file.c"],
     hdrs = ["write_wav_file.h"],
-    deps = [":write_wav_file_generic"],
+    deps = [
+        ":logging",
+        ":write_wav_file_generic",
+    ],
 )
 
 c_library(
