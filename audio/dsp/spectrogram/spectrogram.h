@@ -42,7 +42,7 @@
 #include "third_party/eigen3/Eigen/Core"
 #include "third_party/pffft/src/pffft.h"
 
-#include "audio/dsp/porting.h"  // auto-added.
+
 
 namespace audio_dsp {
 

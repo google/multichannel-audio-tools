@@ -30,7 +30,7 @@
 #include "glog/logging.h"
 #include "third_party/eigen3/Eigen/Core"
 
-#include "audio/dsp/porting.h"  // auto-added.
+
 
 namespace audio_dsp {
 

@@ -41,7 +41,7 @@
 #include "glog/logging.h"
 #include "absl/types/span.h"
 
-#include "audio/dsp/porting.h"  // auto-added.
+
 
 
 namespace linear_filters {
