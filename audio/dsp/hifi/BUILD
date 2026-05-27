@@ -74,6 +74,8 @@ cc_library(
     name = "multi_crossover_filter",
     hdrs = ["multi_crossover_filter.h"],
     deps = [
+        "//audio/linear_filters:biquad_filter_coefficients",
+        "//audio/linear_filters:biquad_filter_design",
         "//audio/linear_filters:crossover",
         "//audio/linear_filters:ladder_filter",
         "//third_party/eigen3",
@@ -91,5 +93,33 @@ cc_library(
         "//audio/linear_filters:crossover",
         "//third_party/eigen3",
         "@com_github_glog_glog//:glog",
+    ],
+)
+
+cc_test(
+    name = "multi_crossover_filter_test",
+    size = "large",
+    srcs = ["multi_crossover_filter_test.cc"],
+    deps = [
+        ":multi_crossover_filter",
+        "//audio/dsp:kiss_fft",
+        "//audio/dsp:max_filter",
+        "//audio/dsp:testing_util",
+        "//third_party/eigen3",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "multiband_compressor_test",
+    size = "small",
+    srcs = ["multiband_compressor_test.cc"],
+    deps = [
+        ":dynamic_range_control",
+        ":multiband_compressor",
+        "//audio/dsp:kiss_fft",
+        "//audio/dsp:testing_util",
+        "//third_party/eigen3",
+        "@gtest//:gtest_main",
     ],
 )
