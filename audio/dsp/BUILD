@@ -272,6 +272,25 @@ cc_library(
 )
 
 cc_library(
+    name = "max_filter",
+    hdrs = ["max_filter.h"],
+    deps = [
+        "@com_github_glog_glog//:glog",
+    ],
+)
+
+cc_test(
+    name = "max_filter_test",
+    size = "small",
+    srcs = ["max_filter_test.cc"],
+    deps = [
+        ":max_filter",
+        "@com_google_absl//absl/strings:str_format",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "nelder_mead_searcher",
     hdrs = ["nelder_mead_searcher.h"],
     deps = [
