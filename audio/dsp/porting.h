@@ -23,8 +23,6 @@
 #include <limits>
 #include <string>
 
-#define ABSL_DIE_IF_NULL CHECK_NOTNULL
-
 class MathUtil {
  public:
   enum QuadraticRootType {kNoRealRoots = 0, kAmbiguous = 1, kTwoRealRoots = 2};

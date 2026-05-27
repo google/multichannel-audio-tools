@@ -27,6 +27,9 @@ cc_library(
     srcs = ["porting.cc"],
     # Files get moved into audio/dsp by copy.bara.sky.
     hdrs = ["porting.h"],
+    deps = [
+        "@com_google_absl//absl/log:die_if_null",
+    ],
 )
 
 cc_library(
